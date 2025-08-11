@@ -1,0 +1,10 @@
+{
+  "HV": "device_icons/hv.svg",
+  "TRANSFORMER": "device_icons/transformer.svg",
+  "LV": "device_icons/lv.svg",
+  "UPS": "device_icons/ups.svg",
+  "DC": "device_icons/dc.svg",
+  "PDU": "device_icons/pdu.svg",
+  "SERVER": "device_icons/server.svg",
+  "NETWORK": "device_icons/network.svg"
+}

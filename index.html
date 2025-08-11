@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>电力系统拓扑编辑器</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="d3.v7.min.js"></script>
+
+</head>
+
+<body>
+    <!-- 顶部工具栏 -->
+    <div class="toolbar">
+        <button id="load">加载拓扑</button>
+        <button id="save">保存拓扑</button>
+        <button id="reset">重置画布</button>
+    </div>
+
+    <div class="container">
+        <!-- 左侧设备库 -->
+        <div class="device-library" id="deviceLibrary">
+            <h3>设备库</h3>
+            <div id="deviceItems"></div>
+        </div>
+
+        <!-- 中间拓扑画布 -->
+        <div class="topology-canvas">
+            <svg id="topologySVG"></svg>
+        </div>
+
+        <!-- 右侧属性面板 -->
+        <div class="property-panel" id="propertyPanel">
+            <h3>属性面板</h3>
+            <div id="propertyForm"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,268 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: "Microsoft YaHei", sans-serif;
+    overflow: hidden;
+}
+
+.toolbar {
+    background-color: #2c3e50;
+    padding: 10px;
+    color: white;
+    text-align: center;
+}
+
+.toolbar button {
+    margin: 0 5px;
+    padding: 8px 15px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.toolbar button:hover {
+    background-color: #2980b9;
+}
+
+.container {
+    display: flex;
+    height: calc(100vh - 50px);
+}
+
+.device-library {
+    width: 200px;
+    background-color: #ecf0f1;
+    padding-right: 5px;
+    border-right: 1px solid #bdc3c7;
+    overflow-y: auto;
+}
+
+/* 设备项样式 */
+.device-item {
+    padding: 5px;
+    margin: 3px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 1px;
+    cursor: move;
+    text-align: center;
+}
+
+/* 分类结构样式 */
+.category-area, .category-station, .category-type {
+    margin-bottom: 3px;
+}
+
+.category-header, .subcategory-header, .subsubcategory-header {
+    padding: 5px;
+    background-color: white;
+    color: black;
+    font-weight: bold;
+    border-radius: 1px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.subcategory-header {
+    background-color: white;
+    margin-left: 5px;
+}
+
+.subsubcategory-header {
+    background-color: white;
+    margin-left: 1px;
+}
+
+.category-header:hover, .subcategory-header:hover, .subsubcategory-header:hover {
+    opacity: 0.9;
+}
+
+.arrow {
+    margin-right: 5px;
+    font-size: 12px;
+}
+
+.category-content, .subcategory-content, .subsubcategory-content {
+    padding-left: 5px;
+
+}
+
+.subcategory-content {
+    margin-left: 10px;
+}
+
+.subsubcategory-content {
+    border-left-color: black;
+    margin-left: 10px;
+}
+
+.topology-canvas {
+    flex: 1;
+    background-color: #f9f9f9;
+    position: relative;
+    overflow: hidden;
+}
+
+#topologySVG {
+    width: 100%;
+    height: 100%;
+}
+
+.property-panel {
+    width: 250px;
+    background-color: #ecf0f1;
+    padding: 15px;
+    border-left: 1px solid #bdc3c7;
+    overflow-y: auto;
+}
+
+/* 分隔条样式 */
+.resizer {
+    width: 5px;
+    background: #ccc;
+    cursor: col-resize;
+    user-select: none;
+}
+
+/* 拓扑图加载弹窗样式 */
+.topology-modal {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    font-family: Arial, sans-serif;
+}
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+}
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+}
+.close-modal {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.close-modal:hover {
+    color: #000;
+}
+.modal-body {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 15px 0;
+}
+.search-container {
+    margin-bottom: 15px;
+}
+#topology-search {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+.topology-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.topology-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.topology-item:hover {
+    background-color: #e9e9e9;
+}
+.topology-item.selected {
+    background-color: #e6f2ff;
+    border: 1px solid #b3d9ff;
+}
+.topology-info {
+    display: flex;
+    flex-direction: column;
+}
+.topology-name {
+    font-weight: bold;
+    color: #333;
+}
+.topology-time {
+    font-size: 12px;
+    color: #666;
+}
+.topology-actions {
+    display: flex;
+    gap: 10px;
+}
+.btn-load {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.btn-delete {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.btn-load:hover {
+    background-color: #45a049;
+}
+.btn-delete:hover {
+    background-color: #d32f2f;
+}
+.modal-footer {
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: flex-end;
+}
+.btn-cancel {
+    background-color: #f1f1f1;
+    color: #333;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.btn-cancel:hover {
+    background-color: #e0e0e0;
+}

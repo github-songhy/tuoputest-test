@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50">
+  <rect x="10" y="10" width="30" height="30" rx="2" fill="#34495e" stroke="#2c3e50" stroke-width="2"/>
+  <rect x="15" y="15" width="20" height="5" rx="1" fill="#7f8c8d"/>
+  <rect x="15" y="25" width="20" height="5" rx="1" fill="#7f8c8d"/>
+  <rect x="15" y="35" width="20" height="5" rx="1" fill="#7f8c8d"/>
+  <text x="25" y="28" font-family="Arial" font-size="12" text-anchor="middle" fill="white">SRV</text>
+</svg>

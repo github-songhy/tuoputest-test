@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50">
+  <rect x="10" y="10" width="30" height="30" rx="2" fill="#2ecc71" stroke="#27ae60" stroke-width="2"/>
+  <text x="25" y="28" font-family="Arial" font-size="14" text-anchor="middle" fill="white">LV</text>
+  <line x1="15" y1="20" x2="35" y2="20" stroke="white" stroke-width="1"/>
+  <line x1="15" y1="25" x2="35" y2="25" stroke="white" stroke-width="1"/>
+  <line x1="15" y1="30" x2="35" y2="30" stroke="white" stroke-width="1"/>
+</svg>

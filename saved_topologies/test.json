@@ -1,0 +1,219 @@
+{
+  "fileName": "test.json",
+  "devices": [
+    {
+      "id": "HV001",
+      "name": "10kV高压进线柜",
+      "type": "HV",
+      "status": "normal",
+      "x": 80,
+      "y": 443.99998474121094
+    },
+    {
+      "id": "HV007",
+      "name": "10kV隔离柜",
+      "type": "HV",
+      "status": "normal",
+      "x": 83,
+      "y": 211.00001525878906
+    },
+    {
+      "id": "HV010",
+      "name": "10kV备自投柜",
+      "type": "HV",
+      "status": "normal",
+      "x": 247.99996948242188,
+      "y": 315.99998474121094
+    },
+    {
+      "id": "LV202",
+      "name": "电容补偿柜B",
+      "type": "LV",
+      "status": "normal",
+      "x": 345.0000915527344,
+      "y": 556
+    },
+    {
+      "id": "LV401",
+      "name": "低压进线柜D",
+      "type": "LV",
+      "status": "normal",
+      "x": 355,
+      "y": 60.000003814697266
+    },
+    {
+      "id": "LV602",
+      "name": "电容补偿柜F",
+      "type": "LV",
+      "status": "normal",
+      "x": 665.0000610351562,
+      "y": 60.00000762939453
+    },
+    {
+      "id": "LV701",
+      "name": "低压进线柜G",
+      "type": "LV",
+      "status": "normal",
+      "x": 844,
+      "y": 60
+    },
+    {
+      "id": "LV1002",
+      "name": "电容补偿柜J",
+      "type": "LV",
+      "status": "normal",
+      "x": 858,
+      "y": 527.9999923706055
+    },
+    {
+      "id": "LV1003",
+      "name": "配电出线柜J1",
+      "type": "LV",
+      "status": "normal",
+      "x": 679,
+      "y": 554.9999847412109
+    },
+    {
+      "id": "PDU402",
+      "name": "机柜PDU-B1",
+      "type": "PDU",
+      "status": "normal",
+      "x": 460.99993896484375,
+      "y": 367.9999771118164
+    },
+    {
+      "id": "PDU404",
+      "name": "机柜PDU-D1",
+      "type": "PDU",
+      "status": "normal",
+      "x": 460.9999694824219,
+      "y": 241.99998474121094
+    },
+    {
+      "id": "UPS301",
+      "name": "UPS主机B",
+      "type": "UPS",
+      "status": "normal",
+      "x": 813,
+      "y": 216.99998474121094
+    },
+    {
+      "id": "UPS302",
+      "name": "UPS电池组B",
+      "type": "UPS",
+      "status": "normal",
+      "x": 914.9999694824219,
+      "y": 215.9999771118164
+    },
+    {
+      "id": "UPS501",
+      "name": "UPS主机D",
+      "type": "UPS",
+      "status": "normal",
+      "x": 719.9999694824219,
+      "y": 214.99999237060547
+    },
+    {
+      "id": "UPS502",
+      "name": "UPS电池组D",
+      "type": "UPS",
+      "status": "normal",
+      "x": 819.9999694824219,
+      "y": 378
+    },
+    {
+      "id": "UPS702",
+      "name": "UPS电池组F",
+      "type": "UPS",
+      "status": "normal",
+      "x": 724.9999694824219,
+      "y": 377
+    },
+    {
+      "id": "UPS901",
+      "name": "UPS主机H",
+      "type": "UPS",
+      "status": "normal",
+      "x": 927.9999694824219,
+      "y": 377
+    }
+  ],
+  "connections": [
+    {
+      "source": "HV007",
+      "target": "HV010"
+    },
+    {
+      "source": "HV001",
+      "target": "HV010"
+    },
+    {
+      "source": "HV010",
+      "target": "LV401"
+    },
+    {
+      "source": "HV010",
+      "target": "LV202"
+    },
+    {
+      "source": "PDU402",
+      "target": "PDU404"
+    },
+    {
+      "source": "PDU404",
+      "target": "PDU402"
+    },
+    {
+      "source": "LV401",
+      "target": "LV602"
+    },
+    {
+      "source": "LV602",
+      "target": "LV701"
+    },
+    {
+      "source": "PDU402",
+      "target": "LV1003"
+    },
+    {
+      "source": "LV1003",
+      "target": "LV1002"
+    },
+    {
+      "source": "LV202",
+      "target": "LV1003"
+    },
+    {
+      "source": "PDU404",
+      "target": "LV401"
+    },
+    {
+      "source": "LV701",
+      "target": "UPS301"
+    },
+    {
+      "source": "LV701",
+      "target": "UPS302"
+    },
+    {
+      "source": "LV701",
+      "target": "UPS501"
+    },
+    {
+      "source": "LV1002",
+      "target": "UPS702"
+    },
+    {
+      "source": "LV1002",
+      "target": "UPS502"
+    },
+    {
+      "source": "LV1002",
+      "target": "UPS901"
+    },
+    {
+      "source": "PDU402",
+      "target": "LV202"
+    }
+  ]
+}
