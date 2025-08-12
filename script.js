@@ -273,7 +273,7 @@ function addDeviceToCanvas(device, x, y) {
     nodeGroup.append('text')
         .text(device.name)
         .attr('text-anchor', 'middle')
-        .attr('dy', 30)
+        .attr('dy', 50)
         .attr('fill', 'black')
         .attr('font-size', '10px');
 
@@ -844,10 +844,10 @@ document.addEventListener('keydown', function (e) {
 });
 
 // 定时更新拓扑状态
-function startTopologyUpdates() {
-    // 每2秒更新一次
-    setInterval(updateTopologyStatus, 200000);
-}
+// function startTopologyUpdates() {
+//     // 每2秒更新一次
+//     setInterval(updateTopologyStatus, 200000);
+// }
 
 // 更新拓扑状态
 function updateTopologyStatus() {

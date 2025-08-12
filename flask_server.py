@@ -17,7 +17,7 @@ if not os.path.exists(save_dir):
 def get_devices():
     # 读取CSV数据
     devices = []
-    csv_file = os.path.join(os.path.dirname(__file__), './device_info.csv')
+    csv_file = os.path.join(os.path.dirname(__file__), './device_info2.csv')
     with open(csv_file, 'r', newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
