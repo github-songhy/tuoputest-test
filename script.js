@@ -7,6 +7,10 @@ let dragSource = null;
 let selectedElement = null; // 当前选中的元素（设备或连线）
 let connectingDeviceId = null; // 正在连接的设备ID
 let deviceIconMapping = {}; // 设备图标映射
+let interval_update_secend = 15; // 定时更新时间间隔(单位：秒)
+
+import { connectDevices, updateDeviceConnections} from './test.js';
+export { connections };
 
 // 初始化函数
 window.onload = function () {
@@ -311,43 +315,113 @@ function addDeviceToCanvas(device, x, y) {
     usedDevices.push(device);
 }
 
+// 连接设备
+// function connectDevices(sourceId, targetId) {
+
+//     // 如果连线已经存在，则不再创建
+//     const existingConnection = connections.find(conn => conn.source === sourceId && conn.target === targetId);
+//     if (existingConnection) {
+//         return;
+//     }
+
+//     const svg = d3.select('#topologySVG');
+//     const sourceNode = svg.select(`[data-id="${sourceId}"]`);
+//     const targetNode = svg.select(`[data-id="${targetId}"]`);
+
+//     // 未选择设备则不连线
+//     if (sourceNode.empty() || targetNode.empty()) return;
+
+//     const sourceX = parseFloat(sourceNode.attr('transform').split('(')[1].split(',')[0]);
+//     const sourceY = parseFloat(sourceNode.attr('transform').split(',')[1].split(')')[0]);
+//     const targetX = parseFloat(targetNode.attr('transform').split('(')[1].split(',')[0]);
+//     const targetY = parseFloat(targetNode.attr('transform').split(',')[1].split(')')[0]);
+
+//     // 创建连线并设置ID
+//     const connectionId = `conn-${sourceId}-${targetId}`;
+
+//     // 计算转折点 - 实现直角折线
+//     const midX = (sourceX + targetX) / 2;
+//     const midY = (sourceY + targetY) / 2;
+//     let pathData;
+
+//     // 根据设备位置关系决定折线方向
+//     if (Math.abs(sourceX - targetX) > Math.abs(sourceY - targetY)) {
+//         // 水平为主的连线，在中间位置垂直弯折
+//         pathData = `M ${sourceX} ${sourceY} H ${midX} V ${targetY} H ${targetX}`;
+//     } else {
+//         // 垂直为主的连线，在中间位置水平弯折
+//         pathData = `M ${sourceX} ${sourceY} V ${midY} H ${targetX} V ${targetY}`;
+//     }
+
+//     const path = svg.append('path')
+//         .attr('d', pathData)
+//         .attr('stroke', '#999')
+//         .attr('stroke-width', 3)
+//         .attr('fill', 'none')
+//         .attr('marker-end', `url(#${connectionId}-arrow)`)
+//         .attr('class', 'connection')
+//         .attr('data-id', connectionId);
+
+//     // 添加箭头标记
+//     svg.append('defs').append('marker')
+//         .attr('id', connectionId + '-arrow')
+//         .attr('viewBox', '-0 -5 10 10')
+//         .attr('refX', 5)
+//         .attr('refY', 0)
+//         .attr('orient', 'auto')
+//         .attr('markerWidth', 3)
+//         .attr('markerHeight', 3)
+//         .attr('xoverflow', 'visible')
+//         .append('svg:path')
+//         .attr('d', 'M 0,-5 L 10,0 L 0,5')
+//         .attr('fill', '#999');
+
+//     // 存储连线
+//     connections.push({
+//         id: connectionId,
+//         element: path,
+//         source: sourceId,
+//         target: targetId
+//     });
+// }
+
 // 更新设备的所有连线
-function updateDeviceConnections(deviceId = '') {
-    svg = d3.select('#topologySVG');
-    // 遍历所有连线
-    connections.forEach(conn => {
-        // 如果操作的是单个元素检查连线是否连接到当前设备      
-        if (conn.source == deviceId || conn.target == deviceId) {
-            // 获取源设备坐标
-            const sourceNode = svg.select(`[data-id="${conn.source}"]`);
-            const sourceX = parseFloat(sourceNode.attr('transform').split('(')[1].split(',')[0]);
-            const sourceY = parseFloat(sourceNode.attr('transform').split(',')[1].split(')')[0]);
+// function updateDeviceConnections(deviceId = '') {
+//     let svg = d3.select('#topologySVG');
+//     // 遍历所有连线
+//     connections.forEach(conn => {
+//         // 如果操作的是单个元素检查连线是否连接到当前设备      
+//         if (conn.source == deviceId || conn.target == deviceId) {
+//             // 获取源设备坐标
+//             const sourceNode = svg.select(`[data-id="${conn.source}"]`);
+//             const sourceX = parseFloat(sourceNode.attr('transform').split('(')[1].split(',')[0]);
+//             const sourceY = parseFloat(sourceNode.attr('transform').split(',')[1].split(')')[0]);
 
-            // 获取目标设备坐标
-            const targetNode = svg.select(`[data-id="${conn.target}"]`);
-            const targetX = parseFloat(targetNode.attr('transform').split('(')[1].split(',')[0]);
-            const targetY = parseFloat(targetNode.attr('transform').split(',')[1].split(')')[0]);
+//             // 获取目标设备坐标
+//             const targetNode = svg.select(`[data-id="${conn.target}"]`);
+//             const targetX = parseFloat(targetNode.attr('transform').split('(')[1].split(',')[0]);
+//             const targetY = parseFloat(targetNode.attr('transform').split(',')[1].split(')')[0]);
 
-            // 计算转折点 - 更新折线路径
-            const midX = (sourceX + targetX) / 2;
-            const midY = (sourceY + targetY) / 2;
+//             // 计算转折点 - 更新折线路径
+//             const midX = (sourceX + targetX) / 2;
+//             const midY = (sourceY + targetY) / 2;
 
-            let pathData;
+//             let pathData;
 
-            // 根据设备位置关系决定折线方向
-            if (Math.abs(sourceX - targetX) > Math.abs(sourceY - targetY)) {
-                // 水平为主的连线，在中间位置垂直弯折
-                pathData = `M ${sourceX} ${sourceY} H ${midX} V ${targetY} H ${targetX}`;
-            } else {
-                // 垂直为主的连线，在中间位置水平弯折
-                pathData = `M ${sourceX} ${sourceY} V ${midY} H ${targetX} V ${targetY}`;
-            }
+//             // 根据设备位置关系决定折线方向
+//             if (Math.abs(sourceX - targetX) > Math.abs(sourceY - targetY)) {
+//                 // 水平为主的连线，在中间位置垂直弯折
+//                 pathData = `M ${sourceX} ${sourceY} H ${midX} V ${targetY} H ${targetX}`;
+//             } else {
+//                 // 垂直为主的连线，在中间位置水平弯折
+//                 pathData = `M ${sourceX} ${sourceY} V ${midY} H ${targetX} V ${targetY}`;
+//             }
 
-            // 更新连线路径
-            conn.element.attr('d', pathData);
-        }
-    });
-}
+//             // 更新连线路径
+//             conn.element.attr('d', pathData);
+//         }
+//     });
+// }
 
 // 显示属性面板
 function showPropertyPanel(device) {
@@ -648,75 +722,8 @@ function resetCanvas(showConfirm = true) {
     connectingDeviceId = null; // 正在连接的设备ID
 }
 
-// 连接设备
-function connectDevices(sourceId, targetId) {
 
-    // 如果连线已经存在，则不再创建
-    const existingConnection = connections.find(conn => conn.source === sourceId && conn.target === targetId);
-    if (existingConnection) {
-        return;
-    }
 
-    const svg = d3.select('#topologySVG');
-    const sourceNode = svg.select(`[data-id="${sourceId}"]`);
-    const targetNode = svg.select(`[data-id="${targetId}"]`);
-
-    // 未选择设备则不连线
-    if (sourceNode.empty() || targetNode.empty()) return;
-
-    const sourceX = parseFloat(sourceNode.attr('transform').split('(')[1].split(',')[0]);
-    const sourceY = parseFloat(sourceNode.attr('transform').split(',')[1].split(')')[0]);
-    const targetX = parseFloat(targetNode.attr('transform').split('(')[1].split(',')[0]);
-    const targetY = parseFloat(targetNode.attr('transform').split(',')[1].split(')')[0]);
-
-    // 创建连线并设置ID
-    const connectionId = `conn-${sourceId}-${targetId}`;
-
-    // 计算转折点 - 实现直角折线
-    const midX = (sourceX + targetX) / 2;
-    const midY = (sourceY + targetY) / 2;
-    let pathData;
-
-    // 根据设备位置关系决定折线方向
-    if (Math.abs(sourceX - targetX) > Math.abs(sourceY - targetY)) {
-        // 水平为主的连线，在中间位置垂直弯折
-        pathData = `M ${sourceX} ${sourceY} H ${midX} V ${targetY} H ${targetX}`;
-    } else {
-        // 垂直为主的连线，在中间位置水平弯折
-        pathData = `M ${sourceX} ${sourceY} V ${midY} H ${targetX} V ${targetY}`;
-    }
-
-    const path = svg.append('path')
-        .attr('d', pathData)
-        .attr('stroke', '#999')
-        .attr('stroke-width', 3)
-        .attr('fill', 'none')
-        .attr('marker-end', `url(#${connectionId}-arrow)`)
-        .attr('class', 'connection')
-        .attr('data-id', connectionId);
-
-    // 添加箭头标记
-    svg.append('defs').append('marker')
-        .attr('id', connectionId + '-arrow')
-        .attr('viewBox', '-0 -5 10 10')
-        .attr('refX', 5)
-        .attr('refY', 0)
-        .attr('orient', 'auto')
-        .attr('markerWidth', 3)
-        .attr('markerHeight', 3)
-        .attr('xoverflow', 'visible')
-        .append('svg:path')
-        .attr('d', 'M 0,-5 L 10,0 L 0,5')
-        .attr('fill', '#999');
-
-    // 存储连线
-    connections.push({
-        id: connectionId,
-        element: path,
-        source: sourceId,
-        target: targetId
-    });
-}
 
 // 添加点击事件、连接事件处理
 d3.select('#topologySVG').on('click', function (event) {
@@ -844,10 +851,10 @@ document.addEventListener('keydown', function (e) {
 });
 
 // 定时更新拓扑状态
-// function startTopologyUpdates() {
-//     // 每2秒更新一次
-//     setInterval(updateTopologyStatus, 200000);
-// }
+function startTopologyUpdates() {
+    // 每interval_secend秒更新一次
+    setInterval(updateTopologyStatus, interval_update_secend * 1000);
+}
 
 // 更新拓扑状态
 function updateTopologyStatus() {
@@ -859,19 +866,17 @@ function updateTopologyStatus() {
             // 存储异常设备ID
             const abnormalDevices = new Set();
 
-            // 更新设备状态
+            // 更新设备状态 并 收集异常设备信息
             usedDevices.forEach(device => {
                 const newStatus = deviceStatuses[device.id] || device.status;
-                if (newStatus !== device.status) {
-                    device.status = newStatus;
+                device.status = newStatus;
 
-                    // 更新设备显示
-                    updateDeviceDisplay(device);
+                // 更新设备显示
+                updateDeviceDisplay(device);
 
-                    // 如果变为异常状态，添加到异常设备集合
-                    if (newStatus === 'warning' || newStatus === 'error') {
-                        abnormalDevices.add(device.id);
-                    }
+                // 如果变为异常状态，添加到异常设备集合
+                if (newStatus === 'warning' || newStatus === 'error') {
+                    abnormalDevices.add(device.id);
                 }
             });
 
@@ -906,6 +911,9 @@ function updateDeviceDisplay(device) {
     let statusColor = '#2ecc71'; // 正常状态
     if (device.status === 'warning') statusColor = '#f1c40f'; // 警告状态
     if (device.status === 'error') statusColor = '#e74c3c'; // 故障状态
+
+    // 移除旧的警告图标
+    nodeGroup.select('text.warning-icon').remove();
 
     // 更新设备图标边框颜色
     nodeGroup.select('image')
@@ -951,7 +959,9 @@ function findDownstreamDevices(deviceId) {
     }
 
     findDevices(deviceId);
+    console.log('downstreamDevices', downstreamDevices);
     return downstreamDevices;
+    
 }
 
 // 添加警告图标

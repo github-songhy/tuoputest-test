@@ -27,26 +27,36 @@ def get_devices():
 @app.route('/api/device-status', methods=['GET'])
 def get_device_status():
     # 模拟设备状态更新
-    csv_file = os.path.join(os.path.dirname(__file__), './device_info.csv')
-    devices = []
+    csv_file = os.path.join(os.path.dirname(__file__), './device_info2.csv')
+    device_statuses = {}
     with open(csv_file, 'r', newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            devices.append(row['id'])
-
-    # 随机选择一些设备设置为异常状态
-    device_statuses = {}
-    for device_id in devices:
-        # 80%的概率保持正常状态
-        if random.random() < 0.8:
-            device_statuses[device_id] = 'normal'
-        else:
-            # 10%警告，10%错误
-            if random.random() < 0.5:
-                device_statuses[device_id] = 'warning'
-            else:
-                device_statuses[device_id] = 'error'
+            device_statuses[row['id']] = row['status']
     return jsonify(device_statuses)
+
+
+    # 模拟设备状态更新
+    # csv_file = os.path.join(os.path.dirname(__file__), './device_info.csv')
+    # devices = []
+    # device_statuses = {}
+    # with open(csv_file, 'r', newline='', encoding='utf-8') as f:
+    #     reader = csv.DictReader(f)
+    #     for row in reader:
+    #         devices.append(row['id'])
+    # 
+    # 随机选择一些设备设置为异常状态
+    # for device_id in devices:
+    #     # 80%的概率保持正常状态
+    #     if random.random() < 0.8:
+    #         device_statuses[device_id] = 'normal'
+    #     else:
+    #         # 10%警告，10%错误
+    #         if random.random() < 0.5:
+    #             device_statuses[device_id] = 'warning'
+    #         else:
+    #             device_statuses[device_id] = 'error'
+    # return jsonify(device_statuses)
 
 @app.route('/api/topology-files', methods=['GET'])
 def get_topology_files():
