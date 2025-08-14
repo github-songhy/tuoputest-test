@@ -1,7 +1,7 @@
 id,name,type,status,voltage,area,station,notes
 1001,主路市电高压输入-石牌F24 ,高压输入,normal,10kv,天河,天河机楼,
 1002,备路市电高压输入-太古F36 ,高压输入,normal,10kv,天河,天河机楼,
-1003,ATS高压柜,高压柜,normal,,天河,天河机楼,
+1003,ATS高压柜,高压柜,error,,天河,天河机楼,
 1005,1#变压器,变压器,normal,1000kvA,天河,天河机楼,
 1006,2#变压器,变压器,normal,500kvA,天河,天河机楼,
 1007,低压柜#1,低压柜,normal,,天河,天河机楼,

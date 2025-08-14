@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>电力系统拓扑编辑器</title>
+    <link rel="stylesheet" href="static/css/style.css">
+
+    <script src="static/js/d3.v7.min.js"></script>
+
+
+</head>
+
+<body>
+    <!-- 顶部工具栏 -->
+    <div class="toolbar">
+        <div class="toolbar-left">
+            <button id="load">加载拓扑</button>
+            <button id="save">保存拓扑</button>
+            <button id="reset">重置画布</button>
+        </div>
+        <div class="toolbar-center">
+            <h1>动力设备拓扑故障监控</h1>
+        </div>
+        <div class="toolbar-right">
+            <select id="connTypeSelect">
+                <option value="">-- 请选择连线类型 --</option>
+            </select>
+            <select id="connStyleSelect">
+                <option value="">-- 请选择连线样式 --</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 左侧设备库 -->
+        <div class="device-library" id="deviceLibrary">
+            <h3>设备库</h3>
+            <div id="deviceItems"></div>
+        </div>
+
+        <!-- 中间拓扑画布 -->
+        <div class="topology-canvas">
+            <svg id="topologySVG"></svg>
+        </div>
+
+        <!-- 右侧属性面板 -->
+        <div class="property-panel" id="propertyPanel">
+            <h3>属性面板</h3>
+            <div id="propertyForm"></div>
+        </div>
+    </div>
+
+    <script src="static/js/canvas.js" type="module"></script>
+
+
+</body>
+
+
+</html>

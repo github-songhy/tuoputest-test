@@ -1,0 +1,6 @@
+{
+    "data_path": "static/data/device_info2.csv",
+    "saved_topology_dir": "saved_topologies",
+    "indexHtml_path": "static/index.html"
+
+}

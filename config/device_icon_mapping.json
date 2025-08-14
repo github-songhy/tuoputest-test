@@ -1,0 +1,20 @@
+{
+  "HV": "../static/device_icons/hv.svg",
+  "TRANSFORMER": "../static/device_icons/transformer.svg",
+  "LV": "../static/device_icons/lv.svg",
+  "UPS": "../static/device_icons/ups.svg",
+  "DC": "../static/device_icons/dc.svg",
+  "PDU": "../static/device_icons/pdu.svg",
+  "SERVER": "../static/device_icons/server.svg",
+  "NETWORK": "../static/device_icons/network.svg",
+  "高压输入": "../static/device_icons2/高压输入.png",
+  "高压柜": "../static/device_icons2/高压柜.png",
+  "变压器": "../static/device_icons2/变压器.png",
+  "低压柜": "../static/device_icons2/低压柜.png",
+  "变压器联络互联": "../static/device_icons2/变压器联络互联.png",
+  "油机": "../static/device_icons2/油机.png",
+  "油机输出屏": "../static/device_icons2/油机输出屏.png",
+  "油机联络柜": "../static/device_icons2/油机联络柜.png",
+  "油机直供屏": "../static/device_icons2/油机直供屏.png",
+  "低压配电屏": "../static/device_icons2/低压配电屏.png"
+}
