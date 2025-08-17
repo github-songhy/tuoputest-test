@@ -1,8 +1,5 @@
-import { connections, connFormat } from './global-variable.js';
-import { CONNECTION_STYLES_DETAIL, CONNECTION_STYLES, CONNECTION_TYPES, PATH_DETAIL} from './constants.js';
-
-connFormat.type =  CONNECTION_TYPES.rightAngle
-connFormat.style = CONNECTION_STYLES.default
+import { connections, connFormat, originConnColor } from './global-variable.js';
+import { CONNECTION_STYLES_DETAIL, PATH_DETAIL } from './constants.js';
 
 // 解析transform属性获取位置的工具函数
 function parseTransform(transform) {
@@ -12,7 +9,6 @@ function parseTransform(transform) {
         y: parseFloat(match[2])
     } : { x: 0, y: 0 };
 }
-
 
 // 生成连线路径数据的工具函数 - 支持五种不同风格
 function generatePathData(sourceX, sourceY, targetX, targetY, conntype = connFormat.type) {
@@ -158,6 +154,7 @@ function connectDevices(sourceId, targetId, connStyle = connFormat.style, connTy
 
     // 检查样式是否存在
     const styleConfig = CONNECTION_STYLES_DETAIL[connStyle] || CONNECTION_STYLES_DETAIL.default;
+    originConnColor.color = styleConfig.lineColor;
 
     // 如果连线已经存在，则不再创建
     const existingConnection = connections.find(conn =>
@@ -249,9 +246,9 @@ function connectDevices(sourceId, targetId, connStyle = connFormat.style, connTy
         .attr('stroke-linecap', 'round') // 线条端点圆润
         .attr('stroke-linejoin', 'round'); // 线条连接点圆润
 
-    // 添加连线动画
+    // 添加连线延迟
     path.transition()
-        .duration(500)
+        .duration(100)
         .attr('opacity', 1);
 
     // 添加交互效果
@@ -277,11 +274,12 @@ function connectDevices(sourceId, targetId, connStyle = connFormat.style, connTy
         target: targetId,
         style: connStyle
     });
+
+    addFlowEffect(connectionId);
 }
 
 // 优化后的更新连线函数
 function updateDeviceConnections(deviceId = '', connType = connFormat.type, connStyle = connFormat.style) {
-
     const svg = d3.select('#topologySVG');
     // 获取需要更新的连线（如果指定了设备ID则只更新相关连线，否则更新所有）
     const connectionsToUpdate = deviceId
@@ -311,7 +309,7 @@ function updateDeviceConnections(deviceId = '', connType = connFormat.type, conn
 
         // 生成新的样式配置
         const styleConfig = CONNECTION_STYLES_DETAIL[connStyle] || CONNECTION_STYLES_DETAIL.default;
-        
+        originConnColor.color = styleConfig.lineColor;
 
         // 更新连线路径
         conn.element
@@ -319,26 +317,148 @@ function updateDeviceConnections(deviceId = '', connType = connFormat.type, conn
             .attr('stroke', styleConfig.lineColor)
             .attr('stroke-width', styleConfig.lineWidth)
             .attr('stroke-dasharray', styleConfig.lineDash.join(' '))
-        
+
         // 更新交互效果
         conn.element
-        .on('mouseover', function () {
-            d3.select(this)
-                .attr('stroke', styleConfig.lineHoverColor)
-                .attr('stroke-width', styleConfig.lineHoverWidth)
-                .attr('marker-end', 'url(#connection-arrow-hover)');
+            .on('mouseover', function () {
+                d3.select(this)
+                    .attr('stroke', styleConfig.lineHoverColor)
+                    .attr('stroke-width', styleConfig.lineHoverWidth)
+                    .attr('marker-end', 'url(#connection-arrow-hover)');
             }
-        )
-        .on('mouseout', function () {
-            d3.select(this)
-                .attr('stroke', styleConfig.lineColor)
-                .attr('stroke-width', styleConfig.lineWidth)
-                .attr('marker-end', 'url(#connection-arrow)');
-        })
-        .style('cursor', 'pointer');
-        
+            )
+            .on('mouseout', function () {
+                d3.select(this)
+                    .attr('stroke', styleConfig.lineColor)
+                    .attr('stroke-width', styleConfig.lineWidth)
+                    .attr('marker-end', 'url(#connection-arrow)');
+            })
+            .style('cursor', 'pointer');
+
     });
 }
 
+// 添加流动效果
+function addFlowEffect(connectionId) {
+    const connection = connections.find(conn => conn.id === connectionId);
+    if (!connection) return;
 
-export { connectDevices, updateDeviceConnections };
+    // 创建流动效果容器
+    if (!connection.flowGroup) {
+        const svg = d3.select('#topologySVG');
+        connection.flowGroup = svg.append('g')
+            .attr('class', 'flow-effect')
+            .attr('data-connection-id', connectionId);
+
+        // 创建流动渐变
+        createFlowGradient(connectionId);
+
+        // 添加流动圆形元素
+        const flowCount = 5;
+        for (let i = 0; i < flowCount; i++) {
+            connection.flowGroup.append('circle')
+                .attr('r', 3)
+                .attr('fill', `url(#flowGradient-${connectionId})`)
+                .style('opacity', 0.8)
+                .attr('data-flow-index', i);
+        }
+    }
+
+    // 启动动画
+    animateFlow(connectionId);
+}
+
+// 移除流动效果
+function removeFlowEffect(connectionId) {
+    const connection = connections.find(conn => conn.id === connectionId);
+    if (!connection) return;
+
+    // 停止动画
+    if (connection.animationId) {
+        cancelAnimationFrame(connection.animationId);
+        connection.animationId = null;
+    }
+
+    // 移除流动效果
+    if (connection.flowGroup) {
+        connection.flowGroup.remove();
+        connection.flowGroup = null;
+    }
+}
+
+// 创建流动渐变
+function createFlowGradient(connectionId) {
+    const svg = d3.select('#topologySVG');
+    const defs = svg.select('defs') || svg.append('defs');
+
+    // 检查渐变是否已存在
+    if (defs.select(`#flowGradient-${connectionId}`).empty()) {
+        defs.append('linearGradient')
+            .attr('id', `flowGradient-${connectionId}`)
+            .attr('x1', '0%')
+            .attr('y1', '0%')
+            .attr('x2', '100%')
+            .attr('y2', '0%')
+            .selectAll('stop')
+            .data([
+                { offset: '0%', color: 'rgba(255, 255, 255, 0)' },
+                { offset: '50%', color: 'rgba(255, 255, 255, 1)' },
+                { offset: '100%', color: 'rgba(255, 255, 255, 0)' }
+            ])
+            .enter().append('stop')
+            .attr('offset', d => d.offset)
+            .attr('stop-color', d => d.color);
+    }
+}
+
+// 动画流动效果
+function animateFlow(connectionId) {
+    const connection = connections.find(conn => conn.id === connectionId);
+    if (!connection || !connection.flowGroup) return;
+
+    // 正确选择连线元素（确保ID选择器正确）
+    const path = d3.select(`[data-id="${connectionId}"]`);
+    if (path.empty()) {
+        console.error(`找不到连线元素:[data-id="${connectionId}"]`);
+        return;
+    }
+
+    // 获取路径长度
+    const pathLength = path.node().getTotalLength();
+
+    // 存储动画ID
+    if (!connection.animationId) {
+        // 动画更新
+        function updateFlow() {
+            const SPEED_FACTOR = 0.3  // 速度因子，越大越快
+            const PHASE_DELAY = 0.5      // 元素间相位延迟，越小越密集
+            const time = Date.now() * SPEED_FACTOR / 1000;
+
+            // 检查流动组是否存在
+            if (!connection.flowGroup) {
+                return; // 如果不存在，停止动画
+            }
+
+            connection.flowGroup.selectAll('circle')
+                .attr('transform', (_, i) => {
+                    // 计算每个流动元素的位置
+                    const phase = (time + i * PHASE_DELAY) % 2;
+                    const position = phase * pathLength;
+                    const point = path.node().getPointAtLength(position);
+                    return `translate(${point.x}, ${point.y})`;
+                });
+
+            // 只有在流动组存在时才继续请求动画帧
+            if (connection.flowGroup) {
+                connection.animationId = requestAnimationFrame(updateFlow);
+            }
+        }
+
+        // 启动动画
+        connection.animationId = requestAnimationFrame(updateFlow);
+        
+    }
+}
+
+export { connectDevices, updateDeviceConnections, addFlowEffect, removeFlowEffect };
+

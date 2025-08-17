@@ -73,7 +73,7 @@ const HIGHLIGHT_COLOR = '#ffff00'
 
 // 应用程序配置常量
 const APP_CONFIG = {
-    intervalUpdateSeconds: 10,  // 定时更新时间间隔(单位：秒)
+    intervalUpdateSeconds: 3,  // 定时更新时间间隔(单位：秒)
     defaultIconPath: 'device_icons/hv.svg' // 默认设备图标路径
 };
 

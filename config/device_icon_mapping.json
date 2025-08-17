@@ -16,5 +16,10 @@
   "油机输出屏": "../static/device_icons2/油机输出屏.png",
   "油机联络柜": "../static/device_icons2/油机联络柜.png",
   "油机直供屏": "../static/device_icons2/油机直供屏.png",
-  "低压配电屏": "../static/device_icons2/低压配电屏.png"
+  "低压配电屏": "../static/device_icons2/低压配电屏.png",
+  "直流系统电池组": "../static/device_icons2/直流系统电池组.png",
+  "整流器电池组": "../static/device_icons2/整流器电池组.png",
+  "UPS电池组": "../static/device_icons2/UPS电池组.png",
+  "整流系统": "../static/device_icons2/整流系统.png"
+
 }

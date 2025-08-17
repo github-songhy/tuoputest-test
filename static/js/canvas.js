@@ -1,8 +1,7 @@
-import { devices, usedDevices, connections, deviceIconMapping, selectedElement } from './global-variable.js';
+import { devices, usedDevices, connections, deviceIconMapping, selectedElement, originConnColor } from './global-variable.js';
 import { STATUS_COLORS, APP_CONFIG, HIGHLIGHT_COLOR } from './constants.js';
-
 import { resetCanvas, loadTopology, saveTopology } from './top-function.js';
-import { connectDevices, updateDeviceConnections } from './connection.js';
+import { connectDevices, updateDeviceConnections, addFlowEffect, removeFlowEffect } from './connection.js';
 
 // 交互状态相关变量
 let isDragging = false;
@@ -24,6 +23,17 @@ window.onload = function () {
     document.getElementById('save').addEventListener('click', saveTopology);
     document.getElementById('reset').addEventListener('click', resetCanvas);
     document.getElementById('load').addEventListener('click', loadTopology);
+
+    // 开启定时更新
+    startTopologyUpdates(interval_update_secend);
+    // 清除所有提示窗
+    setTimeout(() => {
+        usedDevices.forEach(device => {
+            clearErrorInfo(device.id);
+        });
+    }, 100);
+
+
 };
 
 // 加载设备图标映射
@@ -37,7 +47,7 @@ function loadDeviceIconMapping() {
         .catch(error => {
             console.error('加载设备图标映射失败:', error);
         });
-}
+};
 
 // 加载设备数据
 function loadDeviceData() {
@@ -68,8 +78,9 @@ function loadDeviceData() {
         });
 }
 
-// 渲染左侧设备库（按area->station->type三级分类）
+// 渲染左侧设备库按area->station->type三级分类
 function renderDeviceLibrary() {
+
     const deviceItems = document.getElementById('deviceItems');
     deviceItems.innerHTML = '';
 
@@ -178,6 +189,7 @@ function initTopologyCanvas() {
     const svg = d3.select('#topologySVG');
 
     // 画布拖拽功能
+    // 画布拖拽功能
     svg.call(d3.drag()
         .on('start', function (event) {
             if (!event.sourceEvent.target.classList.contains('node')) {
@@ -202,6 +214,9 @@ function initTopologyCanvas() {
                     updateDeviceConnections(d.id);
                     return `translate(${d.x},${d.y})`;
                 });
+
+                // 添加这行代码来更新所有提示窗位置
+                updateAllErrorInfoPositions();
 
             }
         })
@@ -436,9 +451,9 @@ function resetColor() {
     // 连线
     else if (selectedElement.type === 'connection') {
         // 清除连线高亮
-        d3.select(`[data-id="${selectedElement.id}"]`).attr('stroke', '#999').attr('stroke-width', 3);
+        d3.select(`[data-id="${selectedElement.id}"]`).attr('stroke', originConnColor.color).attr('stroke-width', 3);
         // 清除箭头高亮
-        d3.select(`#${selectedElement.id}-arrow path`).attr('fill', '#999');
+        d3.select(`#${selectedElement.id}-arrow path`).attr('fill', originConnColor.color);
     }
 }
 
@@ -455,21 +470,24 @@ document.addEventListener('keydown', function (e) {
             svg.select(`[data-id="${deviceId}"]`).remove();
 
             // 从usedDevices数组中移除
+            let usedDevicesTemp = usedDevices.filter(d => d.id !== deviceId)
             usedDevices.length = 0;
-            Object.assign(usedDevices, usedDevices.filter(d => d.id !== deviceId));
+            Object.assign(usedDevices, usedDevicesTemp);
 
             // 删除相关连线
             let relatedConnections = connections.filter(conn => conn.source === deviceId || conn.target === deviceId)
 
             relatedConnections.forEach(conn => {
                 conn.element.remove();
+                removeFlowEffect(conn.id);
             });
 
             // 从connections数组中移除
-            connections.length = 0;
-            Object.assign(connections, connections.filter(conn =>
+            let connectionsTemp = connections.filter(conn =>
                 conn.source !== deviceId && conn.target !== deviceId
-            ));
+            )
+            connections.length = 0;
+            Object.assign(connections, connectionsTemp);
 
             // 清除属性面板
             document.getElementById('propertyForm').innerHTML = '';
@@ -481,9 +499,11 @@ document.addEventListener('keydown', function (e) {
             const connection = connections.find(conn => conn.id === connectionId);
             if (connection) {
                 connection.element.remove();
+                removeFlowEffect(connectionId);
                 // 从connections数组中移除
+                let connectionsTemp = connections.filter(conn => conn.id !== connectionId)
                 connections.length = 0;
-                Object.assign(connections, connections.filter(conn => conn.id !== connectionId));
+                Object.assign(connections, connectionsTemp);
             }
         }
         // 清除选中状态
@@ -494,36 +514,86 @@ document.addEventListener('keydown', function (e) {
 });
 
 // 定时更新拓扑状态
-function startTopologyUpdates() {
+function startTopologyUpdates(secends) {
     // 每interval_secend秒更新一次
-    setInterval(updateTopologyStatus, interval_update_secend * 1000);
+    setInterval(updateTopologyStatus, secends * 1000);
 }
 
 // 更新拓扑状态
 function updateTopologyStatus() {
-    // 模拟从API获取设备状态更新
-    // 实际应用中应替换为真实的API调用
-    fetch('http://localhost:3000/api/device-status')
+
+    fetch('http://localhost:3000/api/devices')
         .then(response => response.json())
-        .then(deviceStatuses => {
+        .then(newDevices => {
             // 存储异常设备ID
             const abnormalDevices = new Set();
+            // 存储正常设备ID
+            const normalDevices = new Set();
+
+            // 查询所有类型为'高压输入'的设备是否有异常状态
+            const highVoltageInputDevices = newDevices.filter(device => device.type === '高压输入');
+            const publicPowerOff = highVoltageInputDevices.every(device => device.status === 'warning' || device.status === 'error');
 
             // 更新设备状态 并 收集异常设备信息
             usedDevices.forEach(device => {
-                const newStatus = deviceStatuses[device.id] || device.status;
-                device.status = newStatus;
+                const newDevice = newDevices.find(item => item.id === device.id);
+                if (newDevice) Object.assign(device, newDevice)
+
+                const newStatus = device.status;
 
                 // 更新设备显示
                 updateDeviceDisplay(device);
 
-                // 如果变为异常状态，添加到异常设备集合
+                // 分类设备状态
                 if (newStatus === 'warning' || newStatus === 'error') {
                     abnormalDevices.add(device.id);
+                } else if (newStatus === 'normal') {
+                    normalDevices.add(device.id);
                 }
             });
 
-            // 为异常设备及其下游设备添加警告图标
+            // 先清除所有设备的提示窗
+            usedDevices.forEach(device => {
+                clearErrorInfo(device.id);
+            });
+
+            // 优化流动效果更新
+            usedDevices.forEach(device => {
+                const deviceId = device.id;
+                const isBackup = device.is_backup === 'True';
+                const sourceConnections = connections.filter(conn => conn.source === deviceId);
+
+                // 是否应该有流动效果标记
+                const shouldHaveFlow = isBackup ?
+                    (device.status === 'error' || device.status === 'warning') :
+                    (device.status === 'normal');
+
+                sourceConnections.forEach(conn => {
+                    // 检查当前连线是否已经有流动效果
+                    // 检查当前连线对象 conn 是否存在 flowGroup 属性，使用双重非运算符 !! 将其转换为布尔值
+                    const hasFlow = !!conn.flowGroup;
+
+                    // 当应该有流动效果且当前没有时，添加流动效果
+                    if (shouldHaveFlow && !hasFlow) {
+                        addFlowEffect(conn.id);
+                        // let sourceD = usedDevices.find(d => d.id === conn.source).name;
+                        // let targetD = usedDevices.find(d => d.id === conn.target).name;
+                        // console.log('添加流动效果', sourceD, '-->', targetD);
+                    }
+                    // 当不应该有流动效果且当前有时，移除流动效果
+                    else if (!shouldHaveFlow && hasFlow) {
+                        // 特殊情况：如果已经有流动效果了，但是是备用油机设备且当前市电断电了那就不移除，否则移除
+                        // 备用油机在告警时会添加流动效果
+                        if (isBackup && publicPowerOff && device.type === '油机');
+                        else {
+                            removeFlowEffect(conn.id);
+                        }
+                    }
+                });
+
+            });
+
+            // 为异常设备及其下游设备添加警告图标和提示窗
             if (abnormalDevices.size > 0) {
                 abnormalDevices.forEach(deviceId => {
                     // 找到下游设备
@@ -534,9 +604,79 @@ function updateTopologyStatus() {
                     // 为所有下游设备添加警告图标
                     downstreamDevices.forEach(id => {
                         addWarningIcon(id);
+                        // connections.filter(conn => conn.source === id).forEach(
+                        //     conn => {
+                        //         if (conn.flowGroup) {
+                        //             // removeFlowEffect(conn.id);
+                        //             // let sourceD = usedDevices.find(d => d.id === conn.source).name;
+                        //             // let targetD = usedDevices.find(d => d.id === conn.target).name;
+                        //             // console.log('移除流动效果', sourceD, '-->', targetD);
+                        //         }
+                        //     }
+                        // )
+
                     });
                 });
+                // 为异常设备添加错误提示窗
+                abnormalDevices.forEach(deviceId => {
+                    const device = usedDevices.find(d => d.id === deviceId);
+                    if (device && (device.status === 'error' || device.status === 'warning')) {
+                        showErrorInfo(device);
+                    }
+                });
             }
+
+            // 新添加的逻辑：传播流动效果到整个路径
+            console.log(connections)
+
+            // 1. 遍历所有设备 找到每个设备的正在活跃(有流动效果)的最源头，如果有，就为以这个设备为起点的连线添加流动效果
+            usedDevices.forEach(device => {
+                const deviceId = device.id;
+
+                // 2. 查找当前设备的所有最源头设备
+                const sourceDevices = findUpstreamSourceDevices(deviceId);
+                if(sourceDevices.size === 0){
+                    return;
+                }
+
+                let activeSources = []
+                sourceDevices.forEach(sourceId => {
+                    connections.filter(conn => conn.source === sourceId).forEach(
+                        conn => {
+                            console.log(!!conn.flowGroup)
+                            // 如果这个源端点有流动效果,那么就把这个源端点加入到activeSources数组中
+                            if (!!conn.flowGroup) {
+                                activeSources.push(sourceId)
+                            }
+                        }
+                    )
+                })
+                // 有可以从某个端点到达的路径，且这个端点是有流动的，那么以这个端点为起点的连线都要添加流动效果
+                setTimeout(() => {
+                    if (activeSources.length != 0) {
+                        connections.filter(conn => conn.source == deviceId).forEach(
+                            conn => {
+                                // 如果没有流动效果,就添加
+                                if (!conn.flowGroup) {
+                                    addFlowEffect(conn.id)
+                                }
+                            }
+                        )
+                    }
+                    //否则，以这个端点为起点的连线都要移除流动效果
+                    else {
+                        connections.filter(conn => conn.source == deviceId).forEach(
+                            conn => {
+                                if (conn.flowGroup) {
+                                    removeFlowEffect(conn.id)
+                                }
+                            }
+                        )
+                    }
+                    console.log(device.name, '的activeSources', activeSources)
+                }, 30);
+
+            });
         })
         .catch(error => {
             console.error('获取设备状态失败:', error);
@@ -606,6 +746,148 @@ function findDownstreamDevices(deviceId) {
 
 }
 
+// 查找设备的所有最源头设备
+function findUpstreamSourceDevices(deviceId) {
+    const sourceDevices = new Set();
+    const visitedDevices = new Set();
+
+    function dfs(currentDeviceId) {
+        // 避免循环引用
+        if (visitedDevices.has(currentDeviceId)) {
+            return;
+        }
+        visitedDevices.add(currentDeviceId);
+
+        // 查找当前设备的所有上游连接
+        const incomingConnections = connections.filter(conn => conn.target === currentDeviceId);
+
+        if (incomingConnections.length === 0) {
+            // 没有上游连接，说明是最源头设备
+            sourceDevices.add(currentDeviceId);
+        } else {
+            // 递归查找所有上游设备
+            incomingConnections.forEach(conn => {
+                dfs(conn.source);
+            });
+        }
+    }
+
+    dfs(deviceId);
+    sourceDevices.delete(deviceId)
+    return sourceDevices;
+}
+
+// 查找从源设备到目标设备路径上的所有连线
+function findPathConnections(sourceId, targetId) {
+    const pathConnections = new Set();
+    const visitedDevices = new Set();
+
+    function dfs(currentDeviceId) {
+        // 避免循环引用
+        if (visitedDevices.has(currentDeviceId)) {
+            return false;
+        }
+        visitedDevices.add(currentDeviceId);
+
+        // 如果到达目标设备，返回true
+        if (currentDeviceId === targetId) {
+            return true;
+        }
+
+        // 查找当前设备的所有下游连接
+        const outgoingConnections = connections.filter(conn => conn.source === currentDeviceId);
+
+        for (const conn of outgoingConnections) {
+            // 递归查找下游设备
+            if (dfs(conn.target)) {
+                // 如果找到了目标设备，将当前连线添加到路径中
+                pathConnections.add(conn.id);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    dfs(sourceId);
+    return pathConnections;
+}
+
+// 清除错误提示窗
+function clearErrorInfo(deviceId) {
+    const svg = d3.select('#topologySVG');
+    const errorInfo = svg.select(`.error-info[data-device-id="${deviceId}"]`);
+    if (!errorInfo.empty()) {
+        errorInfo.remove();
+    }
+}
+
+// 显示错误提示窗
+function showErrorInfo(device) {
+    const svg = d3.select('#topologySVG');
+    const nodeGroup = svg.select(`[data-id="${device.id}"]`);
+
+    if (nodeGroup.empty()) return;
+
+    // 获取设备位置
+    const transform = nodeGroup.attr('transform');
+    if (!transform) return;
+
+    const match = transform.match(/translate\(([^,]+),([^)]+)\)/);
+    if (!match) return;
+
+    const x = parseFloat(match[1]) + 40; // 向右偏移40px
+    const y = parseFloat(match[2]) - 60; // 向上偏移60px
+
+    // 清除旧的提示窗
+    clearErrorInfo(device.id);
+
+    // 获取错误信息
+    const errorInfo = device.error_info || '设备状态异常';
+
+    // 创建提示窗容器
+    const infoGroup = svg.append('g')
+        .attr('class', 'error-info')
+        .attr('data-device-id', device.id)
+        .attr('transform', `translate(${x},${y})`);
+
+    // 计算文本宽度以确定提示框大小
+    const text = infoGroup.append('text')
+        .text(errorInfo)
+        .attr('fill', 'white')
+        .attr('font-size', '12px')
+        .attr('text-anchor', 'middle')
+        .attr('dy', '0.3em');
+
+    const textWidth = text.node().getBBox().width + 10; // 左右各加5px边距
+    const textHeight = 20; // 固定高度
+
+    // 背景矩形
+    infoGroup.insert('rect', 'text')
+        .attr('width', textWidth)
+        .attr('height', textHeight)
+        .attr('rx', 5)
+        .attr('ry', 5)
+        .attr('fill', '#e74c3c')
+        .attr('opacity', '0.9')
+        .attr('x', -textWidth / 2)
+        .attr('y', -textHeight / 2);
+
+    // 连接到设备的线
+    infoGroup.append('line')
+        .attr('x1', -30)
+        .attr('y1', textHeight / 2)
+        .attr('x2', -10)
+        .attr('y2', textHeight / 2 + 15)
+        .attr('stroke', '#e74c3c')
+        .attr('stroke-width', 2)
+        .attr('opacity', '0.9');
+
+    // 添加点击关闭功能
+    infoGroup.on('click', function () {
+        clearErrorInfo(device.id);
+    });
+}
+
 // 添加警告图标
 function addWarningIcon(deviceId) {
     const svg = d3.select('#topologySVG');
@@ -627,8 +909,43 @@ function addWarningIcon(deviceId) {
         .attr('text-anchor', 'middle');
 }
 
-// 页面加载完成后启动更新
-window.addEventListener('load', startTopologyUpdates);
+// 更新所有错误提示窗位置
+function updateAllErrorInfoPositions() {
+    usedDevices.forEach(device => {
+        const svg = d3.select('#topologySVG');
+        const errorInfo = svg.select(`.error-info[data-device-id="${device.id}"]`);
+        if (!errorInfo.empty()) {
+            const nodeGroup = svg.select(`[data-id="${device.id}"]`);
+            const transform = nodeGroup.attr('transform');
+            if (transform) {
+                const match = transform.match(/translate\(([^,]+),([^)]+)\)/);
+                if (match) {
+                    const x = parseFloat(match[1]) + 40; // 向右偏移40px
+                    const y = parseFloat(match[2]) - 60; // 向上偏移60px
+                    errorInfo.attr('transform', `translate(${x},${y})`);
+                }
+            }
+        }
+    });
+}
+
+// 模拟断电事件
+document.getElementById('powerOffSimulation').addEventListener('click', () => {
+    // 向服务器请求模拟断电
+    if (!confirm('确认模拟断电吗？')) {
+        return;
+    }
+    alert('开始模拟断电，市电供电中断')
+    fetch('http://localhost:3000/api/power-off')
+        .then(response => response.json())
+        .then(data => {
+            alert('模拟断电完毕，市电供电恢复')
+            console.log('模拟断电完毕:', data);
+        })
+        .catch(error => {
+            console.error('模拟断电失败:', error);
+        });
+})
 
 
 export {

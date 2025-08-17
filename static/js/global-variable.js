@@ -17,8 +17,8 @@ let deviceIconMapping = {}; // 设备图标映射
 // 原始连线颜色(选择不同的连线样式后，非选中时需要恢复原始颜色)
 let originConnColor = {color: '#4a90e2'}; 
 
-// 正在使用的连线相关变量
-let connFormat = {type: '', style: ''}; // 正在使用的连线格式
+// 正在使用的连线相关变量 默认是 hierarchical default   
+let connFormat = {type: 'hierarchical', style: 'default'}; // 正在使用的连线格式
 
 
 // 导出所有全局变量

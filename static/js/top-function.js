@@ -1,7 +1,7 @@
 import { devices, usedDevices, connections, connFormat } from './global-variable.js';
 import { CONNECTION_STYLES, CONNECTION_TYPES } from './constants.js';
 import {addDeviceToCanvas,connectDevices} from './canvas.js';
-import { updateDeviceConnections } from './connection.js';
+import { updateDeviceConnections, addFlowEffect } from './connection.js';
 
 const connTypeSelect = document.getElementById("connTypeSelect");
 const connStyleSelect = document.getElementById("connStyleSelect");
@@ -239,7 +239,7 @@ function loadTopology() {
                             connectDevices(sourceDevice.id, targetDevice.id);
                         }
                     });
-
+                    
                     alert('拓扑图加载成功！');
                     closeModal();
                 } catch (e) {
@@ -250,7 +250,7 @@ function loadTopology() {
             .catch(error => {
                 console.error('加载拓扑文件失败:', error);
                 alert('加载拓扑文件失败: ' + error.message);
-            });
+            });            
     }
 
     // 删除拓扑文件
