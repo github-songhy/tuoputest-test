@@ -265,6 +265,7 @@ function addDeviceToCanvas(device, x, y) {
             .on('drag', function (event, d) {
                 d3.select(this).attr('transform', `translate(${event.x},${event.y})`);
                 updateDeviceConnections(d.id); // 更新连线位置
+                updateAllErrorInfoPositions(d.id); // 更新相关提示窗位置
 
                 resetColor(); // 清除选中状态
                 //  清除选中元素
@@ -280,7 +281,8 @@ function addDeviceToCanvas(device, x, y) {
             }));
 
     // 设备状态指示
-    let statusColor = STATUS_COLORS.normal; // 正常状态
+    let statusColor = STATUS_COLORS.normal; // 默认状态
+    if (device.status === 'normal') statusColor = STATUS_COLORS.normal; // 正常状态
     if (device.status === 'warning') statusColor = STATUS_COLORS.warning; // 警告状态
     if (device.status === 'error') statusColor = STATUS_COLORS.error; // 故障状态
 
@@ -288,8 +290,8 @@ function addDeviceToCanvas(device, x, y) {
     const iconPath = deviceIconMapping[device.type] || APP_CONFIG.defaultIconPath; // 默认使用HV图标
     nodeGroup.append('image')
         .attr('xlink:href', iconPath)
-        .attr('width', 60)
-        .attr('height', 60)
+        .attr('width', 100)
+        .attr('height', 100)
         .attr('x', -30)
         .attr('y', -30)
         .attr('stroke', statusColor)
@@ -300,11 +302,10 @@ function addDeviceToCanvas(device, x, y) {
     nodeGroup.append('text')
         .text(device.name)
         .attr('text-anchor', 'middle')
-        .attr('dy', 50)
+        .attr('dy', 95)
         .attr('fill', 'black')
-        .attr('font-size', '10px');
+        .attr('font-size', '30px');
 
-    // 移除了固定连接点，现在可以从设备任意位置连接
     // 添加点击事件以支持从任意位置开始连接
     nodeGroup.on('mousedown', function (event, d) {
         if (event.ctrlKey) {
@@ -318,7 +319,7 @@ function addDeviceToCanvas(device, x, y) {
     // 显示设备状态
     if (device.status !== 'normal') {
         nodeGroup.append('circle')
-            .attr('r', 8)
+            .attr('r', 15)
             .attr('cx', 20)
             .attr('cy', -20)
             .attr('fill', statusColor);
@@ -515,11 +516,11 @@ document.addEventListener('keydown', function (e) {
 
 // 定时更新拓扑状态
 function startTopologyUpdates(secends) {
-    // 每interval_secend秒更新一次
+    // 每secend秒更新一次
     setInterval(updateTopologyStatus, secends * 1000);
 }
 
-// 更新拓扑状态
+// 更新拓扑状态、提示窗以及流动效果
 function updateTopologyStatus() {
 
     fetch('http://localhost:3000/api/devices')
@@ -530,12 +531,20 @@ function updateTopologyStatus() {
             // 存储正常设备ID
             const normalDevices = new Set();
 
+            // 先清除所有设备的提示窗
+            usedDevices.forEach(device => {
+                clearErrorInfo(device.id);
+            });
+
             // 查询所有类型为'高压输入'的设备是否有异常状态
             const highVoltageInputDevices = newDevices.filter(device => device.type === '高压输入');
             const publicPowerOff = highVoltageInputDevices.every(device => device.status === 'warning' || device.status === 'error');
 
+            // 首先根据拓扑图的广度优先搜索序列
+            const topologicalOrder = bfsTopologicalOrder(usedDevices, connections)
+
             // 更新设备状态 并 收集异常设备信息
-            usedDevices.forEach(device => {
+            topologicalOrder.forEach(device => {
                 const newDevice = newDevices.find(item => item.id === device.id);
                 if (newDevice) Object.assign(device, newDevice)
 
@@ -552,21 +561,41 @@ function updateTopologyStatus() {
                 }
             });
 
-            // 先清除所有设备的提示窗
-            usedDevices.forEach(device => {
-                clearErrorInfo(device.id);
-            });
+            // 为异常设备及其下游设备添加警告图标和提示窗
+            if (abnormalDevices.size > 0) {
+                abnormalDevices.forEach(deviceId => {
+                    // 找到下游设备
+                    const downstreamDevices = findDownstreamDevices(deviceId);
+                    // 包括自身
+                    downstreamDevices.add(deviceId);
 
-            // 优化流动效果更新
-            usedDevices.forEach(device => {
+                    // 为所有下游设备添加警告图标
+                    downstreamDevices.forEach(id => {
+                        addWarningIcon(id);
+                    });
+                });
+                // 为异常设备添加错误提示窗
+                abnormalDevices.forEach(deviceId => {
+                    const device = usedDevices.find(d => d.id === deviceId);
+                    if (device && (device.status === 'error' || device.status === 'warning')) {
+                        showErrorInfo(device);
+                    }
+                });
+            }
+
+            // 根据状态进行流动效果更新
+            topologicalOrder.forEach(device => {
                 const deviceId = device.id;
                 const isBackup = device.is_backup === 'True';
                 const sourceConnections = connections.filter(conn => conn.source === deviceId);
 
                 // 是否应该有流动效果标记
-                const shouldHaveFlow = isBackup ?
+                let shouldHaveFlow = isBackup ?
                     (device.status === 'error' || device.status === 'warning') :
                     (device.status === 'normal');
+
+                // 如果是市电备路，则不应该有流动效果
+                if (device.notes === '市电备路') shouldHaveFlow = false
 
                 sourceConnections.forEach(conn => {
                     // 检查当前连线是否已经有流动效果
@@ -576,9 +605,6 @@ function updateTopologyStatus() {
                     // 当应该有流动效果且当前没有时，添加流动效果
                     if (shouldHaveFlow && !hasFlow) {
                         addFlowEffect(conn.id);
-                        // let sourceD = usedDevices.find(d => d.id === conn.source).name;
-                        // let targetD = usedDevices.find(d => d.id === conn.target).name;
-                        // console.log('添加流动效果', sourceD, '-->', targetD);
                     }
                     // 当不应该有流动效果且当前有时，移除流动效果
                     else if (!shouldHaveFlow && hasFlow) {
@@ -593,49 +619,17 @@ function updateTopologyStatus() {
 
             });
 
-            // 为异常设备及其下游设备添加警告图标和提示窗
-            if (abnormalDevices.size > 0) {
-                abnormalDevices.forEach(deviceId => {
-                    // 找到下游设备
-                    const downstreamDevices = findDownstreamDevices(deviceId);
-                    // 包括自身
-                    downstreamDevices.add(deviceId);
+            // 最后再根据已经确定的有流动效果的连线确定剩余连线是否要添加或者删除流动
+            // 遍历所有设备 找到每个设备的正在活跃(有流动效果)的最源头
+            // 如果有，就为以这个设备为起点的连线添加流动效果
+            topologicalOrder.forEach(device => {
+                // 只处理正常状态的设备
+                if (device.status != 'normal') return;
 
-                    // 为所有下游设备添加警告图标
-                    downstreamDevices.forEach(id => {
-                        addWarningIcon(id);
-                        // connections.filter(conn => conn.source === id).forEach(
-                        //     conn => {
-                        //         if (conn.flowGroup) {
-                        //             // removeFlowEffect(conn.id);
-                        //             // let sourceD = usedDevices.find(d => d.id === conn.source).name;
-                        //             // let targetD = usedDevices.find(d => d.id === conn.target).name;
-                        //             // console.log('移除流动效果', sourceD, '-->', targetD);
-                        //         }
-                        //     }
-                        // )
-
-                    });
-                });
-                // 为异常设备添加错误提示窗
-                abnormalDevices.forEach(deviceId => {
-                    const device = usedDevices.find(d => d.id === deviceId);
-                    if (device && (device.status === 'error' || device.status === 'warning')) {
-                        showErrorInfo(device);
-                    }
-                });
-            }
-
-            // 新添加的逻辑：传播流动效果到整个路径
-            console.log(connections)
-
-            // 1. 遍历所有设备 找到每个设备的正在活跃(有流动效果)的最源头，如果有，就为以这个设备为起点的连线添加流动效果
-            usedDevices.forEach(device => {
                 const deviceId = device.id;
-
-                // 2. 查找当前设备的所有最源头设备
+                // 查找当前设备的所有最源头设备
                 const sourceDevices = findUpstreamSourceDevices(deviceId);
-                if(sourceDevices.size === 0){
+                if (sourceDevices.size === 0) {
                     return;
                 }
 
@@ -643,7 +637,6 @@ function updateTopologyStatus() {
                 sourceDevices.forEach(sourceId => {
                     connections.filter(conn => conn.source === sourceId).forEach(
                         conn => {
-                            console.log(!!conn.flowGroup)
                             // 如果这个源端点有流动效果,那么就把这个源端点加入到activeSources数组中
                             if (!!conn.flowGroup) {
                                 activeSources.push(sourceId)
@@ -651,30 +644,44 @@ function updateTopologyStatus() {
                         }
                     )
                 })
-                // 有可以从某个端点到达的路径，且这个端点是有流动的，那么以这个端点为起点的连线都要添加流动效果
-                setTimeout(() => {
-                    if (activeSources.length != 0) {
-                        connections.filter(conn => conn.source == deviceId).forEach(
-                            conn => {
-                                // 如果没有流动效果,就添加
-                                if (!conn.flowGroup) {
-                                    addFlowEffect(conn.id)
+  
+                // 当前节点只要有一个“以该源头节点为起点的连线有流动效果的”源头，且以所有上述源头为起点到达该节点的所有路径上只要有一条是通的
+                // 那么以这个端点为起点的连线都要添加流动效果
+                if (activeSources.length != 0 && hasAvailablePath(activeSources, deviceId)) {
+
+                    connections.filter(conn => conn.source == deviceId).forEach(
+                        conn => {
+                            // 如果没有流动效果,就添加
+                            if (!conn.flowGroup) {
+                                addFlowEffect(conn.id)
+                                if(conn.id === 'conn-1013-1016'){
+                                    console.log('conn-1013-1016已添加流动')
                                 }
                             }
-                        )
-                    }
-                    //否则，以这个端点为起点的连线都要移除流动效果
-                    else {
-                        connections.filter(conn => conn.source == deviceId).forEach(
-                            conn => {
-                                if (conn.flowGroup) {
-                                    removeFlowEffect(conn.id)
-                                }
+                        }
+                    )
+                }
+                // 如果没有一个源头能往下流那么以这个端点为起点的连线都要移除流动效果
+                else {
+                    connections.filter(conn => conn.source == deviceId).forEach(
+                        conn => {
+                            if (conn.flowGroup) {
+                                removeFlowEffect(conn.id)
+                                console.log('conn-1013-1016已移除流动')
+                            
                             }
-                        )
-                    }
-                    console.log(device.name, '的activeSources', activeSources)
-                }, 30);
+                        }
+                    )
+                }
+  
+                if (device.name === '低压柜#1') {
+                    let name = usedDevices.find(d => d.id === deviceId).name
+                    console.log(name, ':', 'sourceDevices:', sourceDevices, 'activeSources', activeSources, '是否有可用路径:', hasAvailablePath(activeSources, deviceId))
+                    sourceDevices.forEach(sourceId => {
+                        console.log(findAllPaths(sourceId, deviceId))
+                    })
+                }
+
 
             });
         })
@@ -683,7 +690,7 @@ function updateTopologyStatus() {
         });
 }
 
-// 更新设备显示
+// 更新设备状态显示
 function updateDeviceDisplay(device) {
     const svg = d3.select('#topologySVG');
     const nodeGroup = svg.select(`[data-id="${device.id}"]`);
@@ -691,9 +698,11 @@ function updateDeviceDisplay(device) {
     if (nodeGroup.empty()) return;
 
     // 更新状态颜色
-    let statusColor = '#2ecc71'; // 正常状态
-    if (device.status === 'warning') statusColor = '#f1c40f'; // 警告状态
-    if (device.status === 'error') statusColor = '#e74c3c'; // 故障状态
+    // 设备状态指示
+    let statusColor = STATUS_COLORS.normal; // 默认状态
+    if (device.status === 'normal') statusColor = STATUS_COLORS.normal; // 正常状态
+    if (device.status === 'warning') statusColor = STATUS_COLORS.warning; // 警告状态
+    if (device.status === 'error') statusColor = STATUS_COLORS.error; // 故障状态
 
     // 移除旧的警告图标
     nodeGroup.select('text.warning-icon').remove();
@@ -705,9 +714,9 @@ function updateDeviceDisplay(device) {
     // 更新或添加状态指示器
     const statusIndicator = nodeGroup.select('circle[cx="20"][cy="-20"]');
     if (statusIndicator.empty()) {
-        if (device.status !== 'normal') {
+        if (device.status === 'error' || device.status === 'warning') {
             nodeGroup.append('circle')
-                .attr('r', 8)
+                .attr('r', 15)
                 .attr('cx', 20)
                 .attr('cy', -20)
                 .attr('fill', statusColor);
@@ -721,6 +730,27 @@ function updateDeviceDisplay(device) {
             statusIndicator.attr('fill', statusColor);
         }
     }
+}
+
+// 添加警告图标
+function addWarningIcon(deviceId) {
+    const svg = d3.select('#topologySVG');
+    const nodeGroup = svg.select(`[data-id="${deviceId}"]`);
+
+    if (nodeGroup.empty()) return;
+
+    // 先移除已有的警告图标
+    nodeGroup.select('text.warning-icon').remove();
+
+    // 添加新的警告图标
+    nodeGroup.append('text')
+        .attr('class', 'warning-icon')
+        .text('⚠')
+        .attr('x', 20)
+        .attr('y', -15)
+        .attr('font-size', '16px')
+        .attr('fill', '#e74c3c')
+        .attr('text-anchor', 'middle');
 }
 
 // 查找下游设备
@@ -777,41 +807,6 @@ function findUpstreamSourceDevices(deviceId) {
     return sourceDevices;
 }
 
-// 查找从源设备到目标设备路径上的所有连线
-function findPathConnections(sourceId, targetId) {
-    const pathConnections = new Set();
-    const visitedDevices = new Set();
-
-    function dfs(currentDeviceId) {
-        // 避免循环引用
-        if (visitedDevices.has(currentDeviceId)) {
-            return false;
-        }
-        visitedDevices.add(currentDeviceId);
-
-        // 如果到达目标设备，返回true
-        if (currentDeviceId === targetId) {
-            return true;
-        }
-
-        // 查找当前设备的所有下游连接
-        const outgoingConnections = connections.filter(conn => conn.source === currentDeviceId);
-
-        for (const conn of outgoingConnections) {
-            // 递归查找下游设备
-            if (dfs(conn.target)) {
-                // 如果找到了目标设备，将当前连线添加到路径中
-                pathConnections.add(conn.id);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    dfs(sourceId);
-    return pathConnections;
-}
-
 // 清除错误提示窗
 function clearErrorInfo(deviceId) {
     const svg = d3.select('#topologySVG');
@@ -854,12 +849,12 @@ function showErrorInfo(device) {
     const text = infoGroup.append('text')
         .text(errorInfo)
         .attr('fill', 'white')
-        .attr('font-size', '12px')
+        .attr('font-size', '30px')
         .attr('text-anchor', 'middle')
         .attr('dy', '0.3em');
 
     const textWidth = text.node().getBBox().width + 10; // 左右各加5px边距
-    const textHeight = 20; // 固定高度
+    const textHeight = 30; // 固定高度
 
     // 背景矩形
     infoGroup.insert('rect', 'text')
@@ -868,7 +863,7 @@ function showErrorInfo(device) {
         .attr('rx', 5)
         .attr('ry', 5)
         .attr('fill', '#e74c3c')
-        .attr('opacity', '0.9')
+        .attr('opacity', '1')
         .attr('x', -textWidth / 2)
         .attr('y', -textHeight / 2);
 
@@ -880,7 +875,7 @@ function showErrorInfo(device) {
         .attr('y2', textHeight / 2 + 15)
         .attr('stroke', '#e74c3c')
         .attr('stroke-width', 2)
-        .attr('opacity', '0.9');
+        .attr('opacity', '1');
 
     // 添加点击关闭功能
     infoGroup.on('click', function () {
@@ -888,30 +883,14 @@ function showErrorInfo(device) {
     });
 }
 
-// 添加警告图标
-function addWarningIcon(deviceId) {
-    const svg = d3.select('#topologySVG');
-    const nodeGroup = svg.select(`[data-id="${deviceId}"]`);
-
-    if (nodeGroup.empty()) return;
-
-    // 先移除已有的警告图标
-    nodeGroup.select('text.warning-icon').remove();
-
-    // 添加新的警告图标
-    nodeGroup.append('text')
-        .attr('class', 'warning-icon')
-        .text('⚠')
-        .attr('x', 20)
-        .attr('y', -15)
-        .attr('font-size', '16px')
-        .attr('fill', '#e74c3c')
-        .attr('text-anchor', 'middle');
-}
-
 // 更新所有错误提示窗位置
-function updateAllErrorInfoPositions() {
-    usedDevices.forEach(device => {
+function updateAllErrorInfoPositions(deivceId = '') {
+    let needUpdateDevices = []
+    if (deivceId) {
+        needUpdateDevices = usedDevices.filter(device => device.id === deivceId);
+    } else needUpdateDevices = usedDevices;
+
+    needUpdateDevices.forEach(device => {
         const svg = d3.select('#topologySVG');
         const errorInfo = svg.select(`.error-info[data-device-id="${device.id}"]`);
         if (!errorInfo.empty()) {
@@ -947,6 +926,111 @@ document.getElementById('powerOffSimulation').addEventListener('click', () => {
         });
 })
 
+// 找到从源节点到目标节点的所有路径
+function findAllPaths(sourceId, targetId) {
+    const allPaths = [];
+    const visited = new Set();
+
+    function dfs(currentId, path) {
+        // 避免循环引用
+        if (visited.has(currentId)) {
+            return;
+        }
+
+        // 将当前节点添加到路径中
+        path.push(currentId);
+        visited.add(currentId);
+
+        // 如果到达目标节点，保存路径
+        if (currentId === targetId) {
+            allPaths.push([...path]);
+        } else {
+            // 递归查找所有下游节点
+            const outgoingConnections = connections.filter(conn => conn.source === currentId);
+            for (const conn of outgoingConnections) {
+                dfs(conn.target, path);
+            }
+        }
+
+        // 回溯
+        path.pop();
+        visited.delete(currentId);
+    }
+
+    dfs(sourceId, []);
+    return allPaths;
+}
+
+// 检查是否存在可用路径
+function hasAvailablePath(sourceIds, targetId) {
+    let isAvailable = true;
+    for (const sourceId of sourceIds) {
+        const allPaths = findAllPaths(sourceId, targetId);
+        if (allPaths.length > 0) {
+            // 检查所有路径是否可用
+            for (const path of allPaths) {
+                for (let i = 0; i < path.length - 1; i++) {
+
+                    const conn = connections.find(c => c.source === path[i] && c.target === path[i + 1]);
+                    console.log('检查线', conn, 'conn.flowGroup', conn.flowGroup)
+                    if (conn && conn.flowGroup) {
+                        console.log('找到流动路径:', path[i], '--', path[i + 1]);
+                        continue;
+                    }
+                    // 如果路径中有一段是不流动的则证明这个路径不可用
+                    isAvailable = false;
+                    break;
+                }
+                if (isAvailable) {
+                    return isAvailable
+                }
+            }
+        }
+    }
+    return isAvailable;
+}
+
+// 找到拓扑图广度优先搜索序列
+function bfsTopologicalOrder(devices, connections) {
+    // 创建邻接表和入度映射
+    const graph = new Map();
+    const inDegree = new Map();
+    
+    // 初始化图结构
+    devices.forEach(device => {
+        graph.set(device.id, []);
+        inDegree.set(device.id, 0);
+    });
+    
+    // 构建图
+    connections.forEach(({ source, target }) => {
+        graph.get(source).push(target);
+        inDegree.set(target, inDegree.get(target) + 1);
+    });
+    
+    // 找到所有起点（入度为0的节点）
+    const queue = [];
+    inDegree.forEach((degree, device) => {
+        if (degree === 0) queue.push(device);
+    });
+    
+    // 执行BFS
+    const result = [];
+    while (queue.length > 0) {
+        const node = queue.shift();
+        result.push(devices.find(device => device.id === node));
+        
+        // 处理当前节点的所有邻居
+        graph.get(node).forEach(neighbor => {
+            inDegree.set(neighbor, inDegree.get(neighbor) - 1);
+            if (inDegree.get(neighbor) === 0) {
+                queue.push(neighbor);
+            }
+        });
+    }
+    
+    return result;
+}
 
 export {
     addDeviceToCanvas,

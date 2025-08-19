@@ -151,7 +151,6 @@ function generatePathData(sourceX, sourceY, targetX, targetY, conntype = connFor
 // 优化后的连线函数
 function connectDevices(sourceId, targetId, connStyle = connFormat.style, connType = connFormat.type) {
 
-
     // 检查样式是否存在
     const styleConfig = CONNECTION_STYLES_DETAIL[connStyle] || CONNECTION_STYLES_DETAIL.default;
     originConnColor.color = styleConfig.lineColor;
@@ -357,9 +356,9 @@ function addFlowEffect(connectionId) {
         const flowCount = 5;
         for (let i = 0; i < flowCount; i++) {
             connection.flowGroup.append('circle')
-                .attr('r', 3)
+                .attr('r', 8)
                 .attr('fill', `url(#flowGradient-${connectionId})`)
-                .style('opacity', 0.8)
+                .style('opacity', 1)
                 .attr('data-flow-index', i);
         }
     }
@@ -401,9 +400,9 @@ function createFlowGradient(connectionId) {
             .attr('y2', '0%')
             .selectAll('stop')
             .data([
-                { offset: '0%', color: 'rgba(255, 255, 255, 0)' },
-                { offset: '50%', color: 'rgba(255, 255, 255, 1)' },
-                { offset: '100%', color: 'rgba(255, 255, 255, 0)' }
+                { offset: '0%', color: 'rgba(62, 241, 22, 0)' },
+                { offset: '50%', color: 'rgb(0, 255, 30)' },
+                { offset: '100%', color: 'rgba(22, 184, 4, 0)' }
             ])
             .enter().append('stop')
             .attr('offset', d => d.offset)

@@ -4,6 +4,7 @@
 let devices = [];
 let usedDevices = []; // 已使用的设备列表
 let connections = []; // 存储连线
+
 let selectedElement = {
     type: '',
     id: ''
@@ -19,7 +20,6 @@ let originConnColor = {color: '#4a90e2'};
 
 // 正在使用的连线相关变量 默认是 hierarchical default   
 let connFormat = {type: 'hierarchical', style: 'default'}; // 正在使用的连线格式
-
 
 // 导出所有全局变量
 export {

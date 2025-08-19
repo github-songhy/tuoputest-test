@@ -2,7 +2,6 @@
   "HV": "../static/device_icons/hv.svg",
   "TRANSFORMER": "../static/device_icons/transformer.svg",
   "LV": "../static/device_icons/lv.svg",
-  "UPS": "../static/device_icons/ups.svg",
   "DC": "../static/device_icons/dc.svg",
   "PDU": "../static/device_icons/pdu.svg",
   "SERVER": "../static/device_icons/server.svg",
@@ -17,9 +16,9 @@
   "油机联络柜": "../static/device_icons2/油机联络柜.png",
   "油机直供屏": "../static/device_icons2/油机直供屏.png",
   "低压配电屏": "../static/device_icons2/低压配电屏.png",
-  "直流系统电池组": "../static/device_icons2/直流系统电池组.png",
-  "整流器电池组": "../static/device_icons2/整流器电池组.png",
-  "UPS电池组": "../static/device_icons2/UPS电池组.png",
-  "整流系统": "../static/device_icons2/整流系统.png"
-
+  "电池组": "../static/device_icons2/电池组.png",
+  "整流系统": "../static/device_icons2/整流系统.png",
+  "UPS": "../static/device_icons2/ups.png",
+  "机房": "../static/device_icons2/机房.png",
+  "微模块": "../static/device_icons2/微模块.png"
 }

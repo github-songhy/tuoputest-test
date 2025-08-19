@@ -6,7 +6,7 @@ const CONNECTION_STYLES_DETAIL = {
     default: {
         lineColor: '#4a90e2',
         lineHoverColor: '#2c6ecb',
-        lineWidth: 2,
+        lineWidth: 6,
         lineHoverWidth: 3,
         lineDash: [],
         arrowFill: '#4a90e2',
@@ -17,8 +17,8 @@ const CONNECTION_STYLES_DETAIL = {
     technical: {
         lineColor: '#555',
         lineHoverColor: '#222',
-        lineWidth: 1.5,
-        lineHoverWidth: 2.5,
+        lineWidth: 3,
+        lineHoverWidth: 5,
         lineDash: [],
         arrowFill: '#555',
         arrowHoverFill: '#222',
@@ -28,9 +28,9 @@ const CONNECTION_STYLES_DETAIL = {
     dashed: {
         lineColor: '#7b61ff',
         lineHoverColor: '#5a40e0',
-        lineWidth: 2,
-        lineHoverWidth: 3,
-        lineDash: [5, 3],
+        lineWidth: 4,
+        lineHoverWidth: 6,
+        lineDash: [6, 3],
         arrowFill: '#7b61ff',
         arrowHoverFill: '#5a40e0',
         arrowSize: 5
@@ -43,6 +43,7 @@ const CONNECTION_STYLES = {
     technical: 'technical',
     dashed: 'dashed'
 };
+
 
 // 连线风格常量
 const CONNECTION_TYPES = {
@@ -73,7 +74,7 @@ const HIGHLIGHT_COLOR = '#ffff00'
 
 // 应用程序配置常量
 const APP_CONFIG = {
-    intervalUpdateSeconds: 3,  // 定时更新时间间隔(单位：秒)
+    intervalUpdateSeconds: 2,  // 定时更新时间间隔(单位：秒)
     defaultIconPath: 'device_icons/hv.svg' // 默认设备图标路径
 };
 

@@ -7,12 +7,13 @@ import pandas as pd
 import os
 import time
 
-# static_folder设置的路径的作用是在浏览器地址栏输入类似http://localhost:3000/static_folder/b.html
+# 1.static_folder设置的路径的作用是在浏览器地址栏输入类似http://localhost:3000/static_folder/b.html
 # 会自动取static_folder指定的文件夹下寻找相应的文件
 # 如设置static_folder='../static'后，输入http://localhost:3000/static/b.html 会自动取相对于当前文件的“../static/b.html”
-# 后续无论使用return send_file,还是 send_from_directory都是计算相对于当前文件的相对路径
 
-# template_folder设置的路径的作用是当使用render_template()直接写template_folder设置的文件夹中的文件名
+# 2.无论使用return send_file,还是 send_from_directory都是计算相对于当前文件的相对路径
+
+# 3.template_folder设置的路径的作用是当使用return render_template()直接用参数template_folder指定的文件夹中的文件名
 # 如果不设置默认是当前文件所在目录的templates文件夹
 
 # 获取项目根目录
@@ -34,6 +35,7 @@ save_dir = os.path.join(root_dir, saved_topology_dir)
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
 
+
 # 获取设备信息列表
 @app.route('/api/devices', methods=['GET'])
 def get_devices():
@@ -45,7 +47,6 @@ def get_devices():
         for row in reader:
             devices.append(row)
     return jsonify(devices)
-
 
 # 获取保存的拓扑文件列表
 @app.route('/api/topology-files', methods=['GET'])
@@ -122,7 +123,6 @@ def delete_topology():
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_static(path):
-
     if path == '':
         path = indexHtml_path
 
@@ -188,6 +188,7 @@ def power_off():
     # 先将type为'高压输入'的status列置为error
     device_df.loc[device_df['type'] == '高压输入', 'status'] = 'error'
     device_df.loc[device_df['type'] == '高压输入', 'error_info'] = '市电停电'
+    device_df.loc[device_df['notes'] == '市电备路', 'error_info'] = '等待切换'
 
     last_match_index = None
     for index, row in alarm_df.iterrows():
@@ -219,7 +220,7 @@ def power_off():
         with open(new_csv_file_path , 'w', newline='', encoding='utf-8') as f:
             device_df.to_csv(f, index=False)
         # 等待n秒
-        n = 6
+        n = 5
         print(f"{index + 1}已将修改后的设备信息写入新文件: {new_csv_file_path}")
         time.sleep(n)
     #最后将所有status置为normal，error_info置为空
@@ -233,3 +234,4 @@ def power_off():
 if __name__ == '__main__':
     print('Server running on http://localhost:3000')
     app.run(host='0.0.0.0', port=3000, debug=True)
+
