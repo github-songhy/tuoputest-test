@@ -39,7 +39,7 @@ window.onload = function () {
 // 加载设备图标映射
 function loadDeviceIconMapping() {
     // fetch必须走服务器
-    fetch('http://localhost:3000/config/device_icon_mapping.json')
+    fetch('http://132.97.69.123:3000/config/device_icon_mapping.json')
         .then(response => response.json())
         .then(data => {
             Object.assign(deviceIconMapping, data);;
@@ -52,7 +52,7 @@ function loadDeviceIconMapping() {
 // 加载设备数据
 function loadDeviceData() {
     // 从后端API获取数据
-    fetch('http://localhost:3000/api/devices')
+    fetch('http://132.97.69.123:3000/api/devices')
         .then(response => response.json())
         .then(data => {
             devices.length = 0;
@@ -523,7 +523,7 @@ function startTopologyUpdates(secends) {
 // 更新拓扑状态、提示窗以及流动效果
 function updateTopologyStatus() {
 
-    fetch('http://localhost:3000/api/devices')
+    fetch('http://132.97.69.123:3000/api/devices')
         .then(response => response.json())
         .then(newDevices => {
             // 存储异常设备ID
@@ -538,13 +538,10 @@ function updateTopologyStatus() {
 
             // 查询所有类型为'高压输入'的设备是否有异常状态
             const highVoltageInputDevices = newDevices.filter(device => device.type === '高压输入');
-            const publicPowerOff = highVoltageInputDevices.every(device => device.status === 'warning' || device.status === 'error');
-
-            // 首先根据拓扑图的广度优先搜索序列
-            const topologicalOrder = bfsTopologicalOrder(usedDevices, connections)
+            const publicPowerOff = highVoltageInputDevices.every(device => device.status === 'warning' || device.status === 'error')
 
             // 更新设备状态 并 收集异常设备信息
-            topologicalOrder.forEach(device => {
+            usedDevices.forEach(device => {
                 const newDevice = newDevices.find(item => item.id === device.id);
                 if (newDevice) Object.assign(device, newDevice)
 
@@ -560,6 +557,9 @@ function updateTopologyStatus() {
                     normalDevices.add(device.id);
                 }
             });
+
+            // 根据拓扑图的广度优先搜索序列
+            const topologicalOrder = bfsTopologicalOrder(usedDevices, connections)
 
             // 为异常设备及其下游设备添加警告图标和提示窗
             if (abnormalDevices.size > 0) {
@@ -583,6 +583,14 @@ function updateTopologyStatus() {
                 });
             }
 
+            // 保存原始颜色配置
+            const originalFlowColor = APP_CONFIG.flowEffect.color;
+
+            // 如果市电停电，更改流动效果颜色为黄色
+            if (publicPowerOff) {
+                APP_CONFIG.flowEffect.color = 'rgb(255, 255, 0)';
+            }
+
             // 根据状态进行流动效果更新
             topologicalOrder.forEach(device => {
                 const deviceId = device.id;
@@ -599,7 +607,6 @@ function updateTopologyStatus() {
 
                 sourceConnections.forEach(conn => {
                     // 检查当前连线是否已经有流动效果
-                    // 检查当前连线对象 conn 是否存在 flowGroup 属性，使用双重非运算符 !! 将其转换为布尔值
                     const hasFlow = !!conn.flowGroup;
 
                     // 当应该有流动效果且当前没有时，添加流动效果
@@ -608,8 +615,7 @@ function updateTopologyStatus() {
                     }
                     // 当不应该有流动效果且当前有时，移除流动效果
                     else if (!shouldHaveFlow && hasFlow) {
-                        // 特殊情况：如果已经有流动效果了，但是是备用油机设备且当前市电断电了那就不移除，否则移除
-                        // 备用油机在告警时会添加流动效果
+                        // 特殊情况：如果已经有流动效果了，但是当前是备用油机设备且当前市电断电了那就不移除，否则移除
                         if (isBackup && publicPowerOff && device.type === '油机');
                         else {
                             removeFlowEffect(conn.id);
@@ -654,9 +660,11 @@ function updateTopologyStatus() {
                             // 如果没有流动效果,就添加
                             if (!conn.flowGroup) {
                                 addFlowEffect(conn.id)
-                                if(conn.id === 'conn-1013-1016'){
-                                    console.log('conn-1013-1016已添加流动')
-                                }
+                            }
+                            // 如果有先移除再加以便更新流动颜色
+                            else {
+                                removeFlowEffect(conn.id)
+                                addFlowEffect(conn.id)
                             }
                         }
                     )
@@ -667,23 +675,15 @@ function updateTopologyStatus() {
                         conn => {
                             if (conn.flowGroup) {
                                 removeFlowEffect(conn.id)
-                                console.log('conn-1013-1016已移除流动')
-                            
                             }
                         }
                     )
                 }
-  
-                if (device.name === '低压柜#1') {
-                    let name = usedDevices.find(d => d.id === deviceId).name
-                    console.log(name, ':', 'sourceDevices:', sourceDevices, 'activeSources', activeSources, '是否有可用路径:', hasAvailablePath(activeSources, deviceId))
-                    sourceDevices.forEach(sourceId => {
-                        console.log(findAllPaths(sourceId, deviceId))
-                    })
-                }
-
-
             });
+
+            // 恢复原始颜色配置
+            APP_CONFIG.flowEffect.color = originalFlowColor;
+
         })
         .catch(error => {
             console.error('获取设备状态失败:', error);
@@ -696,6 +696,13 @@ function updateDeviceDisplay(device) {
     const nodeGroup = svg.select(`[data-id="${device.id}"]`);
 
     if (nodeGroup.empty()) return;
+
+    // 根据notes属性设置透明度
+    if (device.notes === 'unimportant') {
+        nodeGroup.attr('opacity', 0.3); // 设置半透明
+    } else {
+        nodeGroup.attr('opacity', 1); // 完全不透明
+    }
 
     // 更新状态颜色
     // 设备状态指示
@@ -748,7 +755,7 @@ function addWarningIcon(deviceId) {
         .text('⚠')
         .attr('x', 20)
         .attr('y', -15)
-        .attr('font-size', '16px')
+        .attr('font-size', '30px')
         .attr('fill', '#e74c3c')
         .attr('text-anchor', 'middle');
 }
@@ -915,7 +922,7 @@ document.getElementById('powerOffSimulation').addEventListener('click', () => {
         return;
     }
     alert('开始模拟断电，市电供电中断')
-    fetch('http://localhost:3000/api/power-off')
+    fetch('http://132.97.69.123:3000/api/power-off')
         .then(response => response.json())
         .then(data => {
             alert('模拟断电完毕，市电供电恢复')
@@ -970,11 +977,8 @@ function hasAvailablePath(sourceIds, targetId) {
             // 检查所有路径是否可用
             for (const path of allPaths) {
                 for (let i = 0; i < path.length - 1; i++) {
-
                     const conn = connections.find(c => c.source === path[i] && c.target === path[i + 1]);
-                    console.log('检查线', conn, 'conn.flowGroup', conn.flowGroup)
                     if (conn && conn.flowGroup) {
-                        console.log('找到流动路径:', path[i], '--', path[i + 1]);
                         continue;
                     }
                     // 如果路径中有一段是不流动的则证明这个路径不可用

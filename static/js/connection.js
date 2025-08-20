@@ -349,25 +349,22 @@ function addFlowEffect(connectionId) {
             .attr('class', 'flow-effect')
             .attr('data-connection-id', connectionId);
 
-        // 创建流动渐变
-        createFlowGradient(connectionId);
-
         // 添加流动形状元素
-        const { shape, size, count } = APP_CONFIG.flowEffect;
+        const { shape, size, count, color } = APP_CONFIG.flowEffect;
         for (let i = 0; i < count; i++) {
             if (shape === 'triangle') {
                 // 创建三角形
                 const triangleSize = size;
                 connection.flowGroup.append('polygon')
                     .attr('points', `${-triangleSize},${triangleSize} ${triangleSize},${triangleSize} 0,${-triangleSize}`)
-                    .attr('fill', `url(#flowGradient-${connectionId})`)
+                    .attr('fill', color)
                     .style('opacity', 1)
                     .attr('data-flow-index', i);
             } else {
                 // 创建圆形(默认)
                 connection.flowGroup.append('circle')
                     .attr('r', size)
-                    .attr('fill', `url(#flowGradient-${connectionId})`)
+                    .attr('fill', color)
                     .style('opacity', 1)
                     .attr('data-flow-index', i);
             }
@@ -396,30 +393,7 @@ function removeFlowEffect(connectionId) {
     }
 }
 
-// 创建流动渐变
-function createFlowGradient(connectionId) {
-    const svg = d3.select('#topologySVG');
-    const defs = svg.select('defs') || svg.append('defs');
-
-    // 检查渐变是否已存在
-    if (defs.select(`#flowGradient-${connectionId}`).empty()) {
-        defs.append('linearGradient')
-            .attr('id', `flowGradient-${connectionId}`)
-            .attr('x1', '0%')
-            .attr('y1', '0%')
-            .attr('x2', '100%')
-            .attr('y2', '0%')
-            .selectAll('stop')
-            .data([
-                { offset: '0%', color: 'rgba(62, 241, 22, 0)' },
-                { offset: '50%', color: 'rgb(0, 255, 30)' },
-                { offset: '100%', color: 'rgba(22, 184, 4, 0)' }
-            ])
-            .enter().append('stop')
-            .attr('offset', d => d.offset)
-            .attr('stop-color', d => d.color);
-    }
-}
+// 注意：根据需求，不再创建流动渐变，直接使用color填充
 
 // 动画流动效果
 function animateFlow(connectionId) {

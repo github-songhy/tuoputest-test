@@ -7,9 +7,9 @@ import pandas as pd
 import os
 import time
 
-# 1.static_folder设置的路径的作用是在浏览器地址栏输入类似http://localhost:3000/static_folder/b.html
+# 1.static_folder设置的路径的作用是在浏览器地址栏输入类似http://132.97.69.123:3000/static_folder/b.html
 # 会自动取static_folder指定的文件夹下寻找相应的文件
-# 如设置static_folder='../static'后，输入http://localhost:3000/static/b.html 会自动取相对于当前文件的“../static/b.html”
+# 如设置static_folder='../static'后，输入http://132.97.69.123:3000/static/b.html 会自动取相对于当前文件的“../static/b.html”
 
 # 2.无论使用return send_file,还是 send_from_directory都是计算相对于当前文件的相对路径
 
@@ -117,9 +117,9 @@ def delete_topology():
         return jsonify({'success': False, 'message': f'删除文件失败: {str(e)}'}), 500
 
 # 提供静态文件服务
-# 如http://localhost:3000/static/index.html
-# 如http://localhost:3000/config/device_mapping.json
-# 如http://localhost:3000/saved_topologies/1.json
+# 如http://132.97.69.123:3000/static/index.html
+# 如http://132.97.69.123:3000/config/device_mapping.json
+# 如http://132.97.69.123:3000/saved_topologies/1.json
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_static(path):
@@ -232,6 +232,6 @@ def power_off():
 
 
 if __name__ == '__main__':
-    print('Server running on http://localhost:3000')
+    print('Server running on http://132.97.69.123:3000')
     app.run(host='0.0.0.0', port=3000, debug=True)
 
