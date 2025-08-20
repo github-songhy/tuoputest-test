@@ -75,7 +75,12 @@ const HIGHLIGHT_COLOR = '#ffff00'
 // 应用程序配置常量
 const APP_CONFIG = {
     intervalUpdateSeconds: 2,  // 定时更新时间间隔(单位：秒)
-    defaultIconPath: 'device_icons/hv.svg' // 默认设备图标路径
+    defaultIconPath: 'device_icons/hv.svg', // 默认设备图标路径
+    flowEffect: {
+        shape: 'triangle',  // 流动效果形状: 'circle' 或 'triangle'
+        size: 8,            // 形状大小
+        count: 5            // 流动元素数量
+    }
 };
 
 // 导出所有常量

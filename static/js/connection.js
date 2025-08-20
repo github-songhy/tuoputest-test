@@ -1,5 +1,5 @@
 import { connections, connFormat, originConnColor } from './global-variable.js';
-import { CONNECTION_STYLES_DETAIL, PATH_DETAIL } from './constants.js';
+import { CONNECTION_STYLES_DETAIL, PATH_DETAIL, APP_CONFIG } from './constants.js';
 
 // 解析transform属性获取位置的工具函数
 function parseTransform(transform) {
@@ -352,14 +352,25 @@ function addFlowEffect(connectionId) {
         // 创建流动渐变
         createFlowGradient(connectionId);
 
-        // 添加流动圆形元素
-        const flowCount = 5;
-        for (let i = 0; i < flowCount; i++) {
-            connection.flowGroup.append('circle')
-                .attr('r', 8)
-                .attr('fill', `url(#flowGradient-${connectionId})`)
-                .style('opacity', 1)
-                .attr('data-flow-index', i);
+        // 添加流动形状元素
+        const { shape, size, count } = APP_CONFIG.flowEffect;
+        for (let i = 0; i < count; i++) {
+            if (shape === 'triangle') {
+                // 创建三角形
+                const triangleSize = size;
+                connection.flowGroup.append('polygon')
+                    .attr('points', `${-triangleSize},${triangleSize} ${triangleSize},${triangleSize} 0,${-triangleSize}`)
+                    .attr('fill', `url(#flowGradient-${connectionId})`)
+                    .style('opacity', 1)
+                    .attr('data-flow-index', i);
+            } else {
+                // 创建圆形(默认)
+                connection.flowGroup.append('circle')
+                    .attr('r', size)
+                    .attr('fill', `url(#flowGradient-${connectionId})`)
+                    .style('opacity', 1)
+                    .attr('data-flow-index', i);
+            }
         }
     }
 
@@ -438,7 +449,7 @@ function animateFlow(connectionId) {
                 return; // 如果不存在，停止动画
             }
 
-            connection.flowGroup.selectAll('circle')
+            connection.flowGroup.selectAll('polygon, circle')
                 .attr('transform', (_, i) => {
                     // 计算每个流动元素的位置
                     const phase = (time + i * PHASE_DELAY) % 2;
