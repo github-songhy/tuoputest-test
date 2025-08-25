@@ -71,7 +71,7 @@ function saveTopology() {
     };
 
     // 发送到后端保存
-    fetch('http://132.97.69.123:3000/api/save-topology', {
+    fetch('/api/save-topology', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -134,7 +134,7 @@ function loadTopology() {
 
     // 加载拓扑文件列表
     function loadTopologyFiles() {
-        fetch('http://132.97.69.123:3000/api/topology-files')
+        fetch('/api/topology-files')
             .then(response => response.json())
             .then(files => {
                 const topologyList = modal.querySelector('.topology-list');
@@ -201,7 +201,7 @@ function loadTopology() {
 
     // 加载选中的拓扑文件
     function loadSelectedTopology(filename) {
-        fetch(`http://132.97.69.123:3000/saved_topologies/${filename}`)
+        fetch(`http://localhost:3000/saved_topologies/${filename}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`无法加载文件: ${response.statusText}`);
@@ -255,7 +255,7 @@ function loadTopology() {
 
     // 删除拓扑文件
     function deleteTopologyFile(filename) {
-        fetch('http://132.97.69.123:3000/api/delete-topology', {
+        fetch('/api/delete-topology', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

@@ -8,7 +8,7 @@ let isDragging = false;
 let dragSource = null;
 let connectingDeviceId = null; // 正在连接的设备ID
 
-// 定时更新时间间隔(单位：秒) - 从常量配置中获取
+// 定时更新时间间隔(单位：秒) - 从常量配置中获取    
 const interval_update_secend = APP_CONFIG.intervalUpdateSeconds;
 
 // 初始化函数
@@ -39,7 +39,7 @@ window.onload = function () {
 // 加载设备图标映射
 function loadDeviceIconMapping() {
     // fetch必须走服务器
-    fetch('http://132.97.69.123:3000/config/device_icon_mapping.json')
+    fetch('/config/device_icon_mapping.json')
         .then(response => response.json())
         .then(data => {
             Object.assign(deviceIconMapping, data);;
@@ -52,7 +52,7 @@ function loadDeviceIconMapping() {
 // 加载设备数据
 function loadDeviceData() {
     // 从后端API获取数据
-    fetch('http://132.97.69.123:3000/api/devices')
+    fetch('/api/devices')
         .then(response => response.json())
         .then(data => {
             devices.length = 0;
@@ -523,7 +523,7 @@ function startTopologyUpdates(secends) {
 // 更新拓扑状态、提示窗以及流动效果
 function updateTopologyStatus() {
 
-    fetch('http://132.97.69.123:3000/api/devices')
+    fetch('/api/devices')
         .then(response => response.json())
         .then(newDevices => {
             // 存储异常设备ID
@@ -558,7 +558,8 @@ function updateTopologyStatus() {
                 }
             });
 
-            // 根据拓扑图的广度优先搜索序列
+            // 获取拓扑图的广度优先搜索序列
+            // 优先处理上游涉设备，避免对某个设备修改其相关连线时上游的设备相关连线还未更新的情况
             const topologicalOrder = bfsTopologicalOrder(usedDevices, connections)
 
             // 为异常设备及其下游设备添加警告图标和提示窗
@@ -590,7 +591,15 @@ function updateTopologyStatus() {
             if (publicPowerOff) {
                 APP_CONFIG.flowEffect.color = 'rgb(255, 255, 0)';
             }
-
+            
+            // 判断是否有油机启动
+            let oilDeviceIsUsed = topologicalOrder.filter(device => device.type === '油机').every(oilDevice => {
+                let relatedConn = connections.find(conn => conn.source === oilDevice.id)
+                if (relatedConn && relatedConn.flowGroup)
+                    return true
+                else false
+            })            
+            
             // 根据状态进行流动效果更新
             topologicalOrder.forEach(device => {
                 const deviceId = device.id;
@@ -604,6 +613,13 @@ function updateTopologyStatus() {
 
                 // 如果是市电备路，则不应该有流动效果
                 if (device.notes === '市电备路') shouldHaveFlow = false
+
+                // 如果当前油机正在供电，则类型为电池的不应该有流动效果
+                if(oilDeviceIsUsed && device.type === '电池组')
+                    shouldHaveFlow = false
+                // 如果当前市电停电但油机没供电，那么所有的电池设备都应该有流动效果
+                if(!oilDeviceIsUsed && publicPowerOff && device.type === '电池组')
+                    shouldHaveFlow = true
 
                 sourceConnections.forEach(conn => {
                     // 检查当前连线是否已经有流动效果
@@ -697,7 +713,7 @@ function updateDeviceDisplay(device) {
 
     if (nodeGroup.empty()) return;
 
-    // 根据notes属性设置透明度
+    // 设置不重要设备的透明度
     if (device.notes === 'unimportant') {
         nodeGroup.attr('opacity', 0.3); // 设置半透明
     } else {
@@ -922,7 +938,7 @@ document.getElementById('powerOffSimulation').addEventListener('click', () => {
         return;
     }
     alert('开始模拟断电，市电供电中断')
-    fetch('http://132.97.69.123:3000/api/power-off')
+    fetch('/api/power-off')
         .then(response => response.json())
         .then(data => {
             alert('模拟断电完毕，市电供电恢复')
@@ -1040,3 +1056,16 @@ export {
     addDeviceToCanvas,
     connectDevices
 }
+
+/*
+
+在机器学习和深度学习中对于结构化数据多分类问题
+1.目前主要的基础模型有哪些
+2.近些年来比较新且比较热门的模型有哪些
+3.简要介绍一下各个模型的原理、准确度和适用场景
+4.在实际应用中，如何选择合适的模型进行多分类任务
+5.基于现有的模型，有哪些比较常见的创新模式
+
+
+
+*/

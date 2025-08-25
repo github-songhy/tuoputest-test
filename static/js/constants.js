@@ -74,7 +74,7 @@ const HIGHLIGHT_COLOR = '#ffff00'
 
 // 应用程序配置常量
 const APP_CONFIG = {
-    intervalUpdateSeconds: 2,  // 定时更新时间间隔(单位：秒)
+    intervalUpdateSeconds: 1,  // 定时更新时间间隔(单位：秒)
     defaultIconPath: 'device_icons/hv.svg', // 默认设备图标路径
     flowEffect: {
         shape: 'circle',  // 流动效果形状: 'circle' 或 'triangle'
