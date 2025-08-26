@@ -7,7 +7,7 @@ const CONNECTION_STYLES_DETAIL = {
         lineColor: '#4a90e2',
         lineHoverColor: '#2c6ecb',
         lineWidth: 6,
-        lineHoverWidth: 3,
+        lineHoverWidth: 10,
         lineDash: [],
         arrowFill: '#4a90e2',
         arrowHoverFill: '#2c6ecb',
@@ -84,6 +84,9 @@ const APP_CONFIG = {
     }
 };
 
+// 形成回路的连线颜色常量
+const LOOPED_CONN_COLOR = 'rgb(238, 88, 213)';
+
 // 导出所有常量
 export {
     CONNECTION_STYLES_DETAIL, // 连线样式详情
@@ -92,5 +95,6 @@ export {
     PATH_DETAIL, // 路径生成相关常量
     STATUS_COLORS, // 设备状态颜色
     HIGHLIGHT_COLOR, // 高亮颜色
-    APP_CONFIG // 应用程序配置
+    APP_CONFIG, // 应用程序配置
+    LOOPED_CONN_COLOR // 回路连线颜色
 };

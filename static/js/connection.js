@@ -1,5 +1,5 @@
 import { connections, connFormat, originConnColor } from './global-variable.js';
-import { CONNECTION_STYLES_DETAIL, PATH_DETAIL, APP_CONFIG } from './constants.js';
+import { CONNECTION_STYLES_DETAIL, PATH_DETAIL, APP_CONFIG, LOOPED_CONN_COLOR } from './constants.js';
 
 // 解析transform属性获取位置的工具函数
 function parseTransform(transform) {
@@ -155,10 +155,12 @@ function connectDevices(sourceId, targetId, connStyle = connFormat.style, connTy
     const styleConfig = CONNECTION_STYLES_DETAIL[connStyle] || CONNECTION_STYLES_DETAIL.default;
     originConnColor.color = styleConfig.lineColor;
 
+    // 检查是否能形成回路
+    const _canLoop = canLoop(sourceId, targetId);
+
     // 如果连线已经存在，则不再创建
     const existingConnection = connections.find(conn =>
-        (conn.source === sourceId && conn.target === targetId) ||
-        (conn.source === targetId && conn.target === sourceId)
+        (conn.source === sourceId && conn.target === targetId)
     );
     if (existingConnection) {
         return;
@@ -166,49 +168,11 @@ function connectDevices(sourceId, targetId, connStyle = connFormat.style, connTy
 
     const svg = d3.select('#topologySVG');
 
-    // 初始化箭头标记 - 只创建一次可复用的标记
-    function initArrowMarkers(svg, styleConfig) {
-        let defs = svg.select('defs');
+    // 初始化箭头标记
+    let defs = svg.select('defs');
         if (defs.empty()) {
             defs = svg.append('defs');
-        }
-
-        // 清除已存在的标记
-        defs.selectAll('.connection-arrow').remove();
-
-        // 创建箭头标记
-        defs.append('marker')
-            .attr('id', 'connection-arrow')
-            .attr('class', 'connection-arrow')
-            .attr('viewBox', '0 -5 10 10')
-            .attr('refX', 10)
-            .attr('refY', 0)
-            .attr('orient', 'auto')
-            .attr('markerWidth', styleConfig.arrowSize)
-            .attr('markerHeight', styleConfig.arrowSize)
-            .append('path')
-            .attr('d', 'M0,-5L10,0L0,5')
-            .attr('fill', styleConfig.arrowFill);
-
-        // 创建悬停状态的箭头标记
-        defs.append('marker')
-            .attr('id', 'connection-arrow-hover')
-            .attr('class', 'connection-arrow')
-            .attr('viewBox', '0 -5 10 10')
-            .attr('refX', 10)
-            .attr('refY', 0)
-            .attr('orient', 'auto')
-            .attr('markerWidth', styleConfig.arrowSize + 1)
-            .attr('markerHeight', styleConfig.arrowSize + 1)
-            .append('path')
-            .attr('d', 'M0,-5L10,0L0,5')
-            .attr('fill', styleConfig.arrowHoverFill);
-    }
-
-    // 初始化箭头标记（如果尚未初始化）
-    if (svg.select('#connection-arrow').empty()) {
-        initArrowMarkers(svg, styleConfig);
-    }
+        } 
 
     const sourceNode = svg.select(`[data-id="${sourceId}"]`);
     const targetNode = svg.select(`[data-id="${targetId}"]`);
@@ -227,6 +191,35 @@ function connectDevices(sourceId, targetId, connStyle = connFormat.style, connTy
 
     // 创建连线并设置ID
     const connectionId = `conn-${sourceId}-${targetId}`;
+    // initArrowMarkers(svg, styleConfig, connectionId);
+
+    // 创建箭头标记
+    defs.append('marker')
+        .attr('id', `${connectionId}-connection-arrow`)
+        .attr('class', 'connection-arrow')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 10)
+        .attr('refY', 0)
+        .attr('orient', 'auto')
+        .attr('markerWidth', styleConfig.arrowSize)
+        .attr('markerHeight', styleConfig.arrowSize)
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', _canLoop ? LOOPED_CONN_COLOR : styleConfig.arrowFill);
+
+    // 创建悬停状态的箭头标记
+    defs.append('marker')
+        .attr('id', 'connection-arrow-hover')
+        .attr('class', 'connection-arrow')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 10)
+        .attr('refY', 0)
+        .attr('orient', 'auto')
+        .attr('markerWidth', styleConfig.arrowSize + 1)
+        .attr('markerHeight', styleConfig.arrowSize + 1)
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', _canLoop ? LOOPED_CONN_COLOR : styleConfig.arrowHoverFill);
 
     // 计算路径数据
     const pathData = generatePathData(sourceX, sourceY, targetX, targetY, connType);
@@ -234,11 +227,11 @@ function connectDevices(sourceId, targetId, connStyle = connFormat.style, connTy
     // 创建连线
     const path = svg.append('path')
         .attr('d', pathData)
-        .attr('stroke', styleConfig.lineColor)
+        .attr('stroke', _canLoop ? LOOPED_CONN_COLOR : styleConfig.lineColor)
         .attr('stroke-width', styleConfig.lineWidth)
         .attr('stroke-dasharray', styleConfig.lineDash.join(' '))
         .attr('fill', 'none')
-        .attr('marker-end', 'url(#connection-arrow)')
+        .attr('marker-end', `url(#${connectionId}-connection-arrow)`)
         .attr('class', 'connection')
         .attr('data-id', connectionId)
         .attr('opacity', 0) // 初始透明度为0，用于动画
@@ -253,27 +246,39 @@ function connectDevices(sourceId, targetId, connStyle = connFormat.style, connTy
     // 添加交互效果
     path.on('mouseover', function () {
         d3.select(this)
-            .attr('stroke', styleConfig.lineHoverColor)
+            .attr('stroke', _canLoop ? LOOPED_CONN_COLOR : styleConfig.lineHoverColor)
             .attr('stroke-width', styleConfig.lineHoverWidth)
             .attr('marker-end', 'url(#connection-arrow-hover)');
     })
         .on('mouseout', function () {
             d3.select(this)
-                .attr('stroke', styleConfig.lineColor)
+                .attr('stroke', _canLoop ? LOOPED_CONN_COLOR : styleConfig.lineColor)
                 .attr('stroke-width', styleConfig.lineWidth)
-                .attr('marker-end', 'url(#connection-arrow)');
+                .attr('marker-end', `url(#${connectionId}-connection-arrow)`);
         })
         .style('cursor', 'pointer');
 
-    // 存储连线
-    connections.push({
-        id: connectionId,
-        element: path,
-        source: sourceId,
-        target: targetId,
-        style: connStyle
-    });
-
+    // 如果已存在sourceId === targetId的连线，则为新添加的线添加一个特殊标记
+    // 检查是否会形成环（当前主要是用于 “整流系统到电池” 和 “电池到整流系统“ 的路径）
+    if (_canLoop) {
+        connections.push({
+            id: connectionId,
+            element: path,
+            source: sourceId,
+            target: targetId,
+            style: connStyle,
+            looped: true
+        });
+    } else {
+        // 存储连线
+        connections.push({
+            id: connectionId,
+            element: path,
+            source: sourceId,
+            target: targetId,
+            style: connStyle
+        });
+    }
     addFlowEffect(connectionId);
 }
 
@@ -287,6 +292,8 @@ function updateDeviceConnections(deviceId = '', connType = connFormat.type, conn
 
     // 遍历需要更新的连线
     connectionsToUpdate.forEach(conn => {
+        // 记录原始颜色
+        const originConnColor = { color: conn.element.attr('stroke') };
         // 获取源设备和目标设备
         const sourceNode = svg.select(`[data-id="${conn.source}"]`);
         const targetNode = svg.select(`[data-id="${conn.target}"]`);
@@ -313,10 +320,11 @@ function updateDeviceConnections(deviceId = '', connType = connFormat.type, conn
         // 更新连线路径
         conn.element
             .attr('d', pathData)
-            .attr('stroke', styleConfig.lineColor)
+            .attr('stroke', conn.looped ? LOOPED_CONN_COLOR : styleConfig.lineColor)
             .attr('stroke-width', styleConfig.lineWidth)
             .attr('stroke-dasharray', styleConfig.lineDash.join(' '))
-
+        // 更新箭头颜色
+        d3.select(`#${conn.id}-connection-arrow path`).attr('fill', conn.looped ? LOOPED_CONN_COLOR : styleConfig.arrowFill);
         // 更新交互效果
         conn.element
             .on('mouseover', function () {
@@ -330,7 +338,7 @@ function updateDeviceConnections(deviceId = '', connType = connFormat.type, conn
                 d3.select(this)
                     .attr('stroke', styleConfig.lineColor)
                     .attr('stroke-width', styleConfig.lineWidth)
-                    .attr('marker-end', 'url(#connection-arrow)');
+                    .attr('marker-end', `url(#${conn.id}-connection-arrow)`);
             })
             .style('cursor', 'pointer');
 
@@ -393,8 +401,6 @@ function removeFlowEffect(connectionId) {
     }
 }
 
-// 注意：根据需求，不再创建流动渐变，直接使用color填充
-
 // 动画流动效果
 function animateFlow(connectionId) {
     const connection = connections.find(conn => conn.id === connectionId);
@@ -440,8 +446,48 @@ function animateFlow(connectionId) {
 
         // 启动动画
         connection.animationId = requestAnimationFrame(updateFlow);
-        
+
     }
+}
+
+// 用于检测新连接是否会形成环
+function canLoop(newLineSourceId, newLinetargetId) {
+    // 构建邻接表
+    const graph = {};
+    connections.forEach(conn => {
+        if (!graph[conn.source]) {
+            graph[conn.source] = [];
+        }
+        graph[conn.source].push(conn.target);
+    });
+
+    // 使用BFS遍历图
+    const visited = new Set();
+    const queue = [newLinetargetId]; // newLineSourceId
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+
+        // 如果找到源设备，返回true
+        if (current === newLineSourceId) {
+            return true;
+        }
+
+        // 标记为已访问
+        visited.add(current);
+
+        // 遍历所有邻居
+        if (graph[current]) {
+            for (const neighbor of graph[current]) {
+                if (!visited.has(neighbor)) {
+                    queue.push(neighbor);
+                }
+            }
+        }
+    }
+
+    // 未找到路径
+    return false;
 }
 
 export { connectDevices, updateDeviceConnections, addFlowEffect, removeFlowEffect };

@@ -20,5 +20,6 @@
   "整流系统": "../static/device_icons2/整流系统.png",
   "UPS": "../static/device_icons2/ups.png",
   "机房": "../static/device_icons2/机房.png",
-  "微模块": "../static/device_icons2/微模块.png"
+  "微模块": "../static/device_icons2/微模块.png",
+  "空调": "../static/device_icons2/空调.png"
 }

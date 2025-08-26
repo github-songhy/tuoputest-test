@@ -185,6 +185,12 @@ def power_off():
     #   4.最后覆盖写入新文件
     # 初始化上一次匹配到的行索引为None
 
+    # 保存电池组设备的原始电压值，用于最后恢复
+    battery_original_voltages = {}
+    battery_rows = device_df[device_df['type'] == '电池组']
+    for idx, row in battery_rows.iterrows():
+        battery_original_voltages[idx] = row['voltage']
+
     # 先将type为'高压输入'的status列置为error
     device_df.loc[device_df['type'] == '高压输入', 'status'] = 'error'
     device_df.loc[device_df['type'] == '高压输入', 'error_info'] = '市电停电'
@@ -212,6 +218,18 @@ def power_off():
             # 合并"告警等级"和"信号名称"到error_info列
             error_info = f"{type}，信号名称：{row['信号名称']}"
             device_df.loc[device_row.index, 'error_info'] = error_info
+            
+            # 处理电池电压相关逻辑
+            if '信号名称' in row and isinstance(row['信号名称'], str):
+                # 查找所有类型为电池组的设备
+                all_battery_devices = device_df[device_df['type'] == '电池组']
+                if '电池' in row['信号名称']:
+                    if '超低' in row['信号名称']:
+                        # 将所有电池组设备的voltage列值修改为47v
+                        device_df.loc[all_battery_devices.index, 'voltage'] = '47v'
+                    elif '过低' in row['信号名称']:
+                        # 将所有电池组设备的voltage列值修改为49v
+                        device_df.loc[all_battery_devices.index, 'voltage'] = '49v'
         else:
             print(f"未找到名称为'{name}'的设备行")
         # 最后将修改后的device_df写入CSV文件
@@ -226,6 +244,11 @@ def power_off():
     #最后将所有status置为normal，error_info置为空
     device_df['status'] = 'normal'
     device_df['error_info'] = ''
+    
+    # 恢复电池组设备的原始电压值
+    for idx, original_voltage in battery_original_voltages.items():
+        device_df.loc[idx, 'voltage'] = original_voltage
+        
     with open(new_csv_file_path , 'w', newline='', encoding='utf-8') as f:
             device_df.to_csv(f, index=False)
     return jsonify({'success': True, 'message': '模拟断电成功'})
@@ -234,4 +257,3 @@ def power_off():
 if __name__ == '__main__':
     print('Server running on http://localhost:3000')
     app.run(host='0.0.0.0', port=3000, debug=True)
-

@@ -26,13 +26,6 @@ window.onload = function () {
 
     // 开启定时更新
     startTopologyUpdates(interval_update_secend);
-    // 清除所有提示窗
-    setTimeout(() => {
-        usedDevices.forEach(device => {
-            clearErrorInfo(device.id);
-        });
-    }, 100);
-
 
 };
 
@@ -189,7 +182,6 @@ function initTopologyCanvas() {
     const svg = d3.select('#topologySVG');
 
     // 画布拖拽功能
-    // 画布拖拽功能
     svg.call(d3.drag()
         .on('start', function (event) {
             if (!event.sourceEvent.target.classList.contains('node')) {
@@ -215,8 +207,10 @@ function initTopologyCanvas() {
                     return `translate(${d.x},${d.y})`;
                 });
 
-                // 添加这行代码来更新所有提示窗位置
+                // 更新所有提示窗位置
                 updateAllErrorInfoPositions();
+                // 更新所有电压信息提示窗位置
+                updateAllVoltageInfoPositions();
 
             }
         })
@@ -266,6 +260,8 @@ function addDeviceToCanvas(device, x, y) {
                 d3.select(this).attr('transform', `translate(${event.x},${event.y})`);
                 updateDeviceConnections(d.id); // 更新连线位置
                 updateAllErrorInfoPositions(d.id); // 更新相关提示窗位置
+                // 更新对应电压信息提示窗位置
+                updateAllVoltageInfoPositions(d.id);
 
                 resetColor(); // 清除选中状态
                 //  清除选中元素
@@ -405,7 +401,7 @@ d3.select('#topologySVG').on('click', function (event) {
         selectedElement.id = connectionId
         // 高亮选中的连线
         d3.select(event.target).attr('stroke', '#ffff00').attr('stroke-width', 4);
-        d3.select(`#${selectedElement.id}-arrow path`).attr('fill', '#ffff00');
+        d3.select(`#${selectedElement.id}-connection-arrow path`).attr('fill', '#ffff00');
 
     }
 
@@ -469,6 +465,8 @@ document.addEventListener('keydown', function (e) {
 
             // 删除设备节点
             svg.select(`[data-id="${deviceId}"]`).remove();
+            clearErrorInfo(deviceId)
+            clearVoltageInfo(deviceId);
 
             // 从usedDevices数组中移除
             let usedDevicesTemp = usedDevices.filter(d => d.id !== deviceId)
@@ -531,13 +529,16 @@ function updateTopologyStatus() {
             // 存储正常设备ID
             const normalDevices = new Set();
 
-            // 先清除所有设备的提示窗
+            // 清除所有设备的提示窗
             usedDevices.forEach(device => {
                 clearErrorInfo(device.id);
+                // 清除电压信息提示窗
+                clearVoltageInfo(device.id);
             });
 
             // 查询所有类型为'高压输入'的设备是否有异常状态
             const highVoltageInputDevices = newDevices.filter(device => device.type === '高压输入');
+            // 全部异常则视为断电
             const publicPowerOff = highVoltageInputDevices.every(device => device.status === 'warning' || device.status === 'error')
 
             // 更新设备状态 并 收集异常设备信息
@@ -550,6 +551,11 @@ function updateTopologyStatus() {
                 // 更新设备显示
                 updateDeviceDisplay(device);
 
+                // 为电池组设备显示电压信息
+                if (device.type === '电池组') {
+                    showVoltageInfo(device);
+                }
+
                 // 分类设备状态
                 if (newStatus === 'warning' || newStatus === 'error') {
                     abnormalDevices.add(device.id);
@@ -560,7 +566,8 @@ function updateTopologyStatus() {
 
             // 获取拓扑图的广度优先搜索序列
             // 优先处理上游涉设备，避免对某个设备修改其相关连线时上游的设备相关连线还未更新的情况
-            const topologicalOrder = bfsTopologicalOrder(usedDevices, connections)
+            // 新增逻辑: 会形成环的线过滤掉，保证能正常使用BFS
+            const topologicalOrder = bfsTopologicalOrder(usedDevices, connections.filter(conn => !conn.looped))
 
             // 为异常设备及其下游设备添加警告图标和提示窗
             if (abnormalDevices.size > 0) {
@@ -593,7 +600,7 @@ function updateTopologyStatus() {
             }
             
             // 判断是否有油机启动
-            let oilDeviceIsUsed = topologicalOrder.filter(device => device.type === '油机').every(oilDevice => {
+            let oilDeviceAreUsed = topologicalOrder.filter(device => device.type === '油机').every(oilDevice => {
                 let relatedConn = connections.find(conn => conn.source === oilDevice.id)
                 if (relatedConn && relatedConn.flowGroup)
                     return true
@@ -615,12 +622,12 @@ function updateTopologyStatus() {
                 if (device.notes === '市电备路') shouldHaveFlow = false
 
                 // 如果当前油机正在供电，则类型为电池的不应该有流动效果
-                if(oilDeviceIsUsed && device.type === '电池组')
+                if(oilDeviceAreUsed && device.type === '电池组')
                     shouldHaveFlow = false
-                // 如果当前市电停电但油机没供电，那么所有的电池设备都应该有流动效果
-                if(!oilDeviceIsUsed && publicPowerOff && device.type === '电池组')
+                // 如果当前市电停电且油机没供电，那么有足够电压的电池设备要供电，都应该有流动效果
+                if(!oilDeviceAreUsed && publicPowerOff && device.type === '电池组' && device.voltage.split('v')[0] * 1 >= 43){
                     shouldHaveFlow = true
-
+                }
                 sourceConnections.forEach(conn => {
                     // 检查当前连线是否已经有流动效果
                     const hasFlow = !!conn.flowGroup;
@@ -643,7 +650,7 @@ function updateTopologyStatus() {
 
             // 最后再根据已经确定的有流动效果的连线确定剩余连线是否要添加或者删除流动
             // 遍历所有设备 找到每个设备的正在活跃(有流动效果)的最源头
-            // 如果有，就为以这个设备为起点的连线添加流动效果
+            // 如果有且到达该设备的路径是通的(某个路径上连线都有流动效果)，就为以这个设备为起点的连线添加流动效果
             topologicalOrder.forEach(device => {
                 // 只处理正常状态的设备
                 if (device.status != 'normal') return;
@@ -696,6 +703,33 @@ function updateTopologyStatus() {
                     )
                 }
             });
+
+            // 电池设备充电时的特殊处理
+            // 当市电停电且油机没供电时，没法充电，所有的构成环的连线(整流系统到电池的连线)都应该移除流动效果
+            let haveOilUsed = topologicalOrder.filter(device => device.type === '油机').some(oilDevice => {
+                let relatedConn = connections.find(conn => conn.source === oilDevice.id)
+                if (relatedConn && relatedConn.flowGroup)
+                    return true
+                else false
+            })
+            if(publicPowerOff && !haveOilUsed) {
+                connections.filter(conn => conn.looped).forEach(conn => {
+                    if(conn.flowGroup)
+                        removeFlowEffect(conn.id)
+                })
+            }
+            // 当市电有电或油机供电且电池设备电压不足时进行充电
+            else{
+                connections.filter(conn => conn.looped).forEach(conn => {
+                    let batteryDevice = usedDevices.find(d => d.id === conn.target)
+                    if(batteryDevice.voltage.split('v')[0] * 1 < 53.7){
+                        if(!conn.flowGroup)
+                            addFlowEffect(conn.id)
+                    }
+                    else
+                        removeFlowEffect(conn.id)
+                })
+            }
 
             // 恢复原始颜色配置
             APP_CONFIG.flowEffect.color = originalFlowColor;
@@ -782,7 +816,7 @@ function findDownstreamDevices(deviceId) {
 
     function findDevices(id) {
         // 找到以id为源的所有连接
-        const outgoingConnections = connections.filter(conn => conn.source === id);
+        const outgoingConnections = connections.filter(conn => !conn.looped && conn.source === id);
 
         outgoingConnections.forEach(conn => {
             const targetId = conn.target;
@@ -812,7 +846,7 @@ function findUpstreamSourceDevices(deviceId) {
         visitedDevices.add(currentDeviceId);
 
         // 查找当前设备的所有上游连接
-        const incomingConnections = connections.filter(conn => conn.target === currentDeviceId);
+        const incomingConnections = connections.filter(conn => !conn.looped && conn.target === currentDeviceId);
 
         if (incomingConnections.length === 0) {
             // 没有上游连接，说明是最源头设备
@@ -837,6 +871,83 @@ function clearErrorInfo(deviceId) {
     if (!errorInfo.empty()) {
         errorInfo.remove();
     }
+}
+
+// 清除电压信息提示窗
+function clearVoltageInfo(deviceId) {
+    const svg = d3.select('#topologySVG');
+    const voltageInfo = svg.select(`.voltage-info[data-device-id="${deviceId}"]`);
+    if (!voltageInfo.empty()) {
+        voltageInfo.remove();
+    }
+}
+
+// 显示电压信息提示窗
+function showVoltageInfo(device) {
+    const svg = d3.select('#topologySVG');
+    const nodeGroup = svg.select(`[data-id="${device.id}"]`);
+
+    if (nodeGroup.empty()) return;
+
+    // 获取设备位置
+    const transform = nodeGroup.attr('transform');
+    if (!transform) return;
+
+    const match = transform.match(/translate\(([^,]+),([^)]+)\)/);
+    if (!match) return;
+
+    const x = parseFloat(match[1]) - 50; // 向左偏移50px
+    const y = parseFloat(match[2]) // 向上偏移50px
+
+    // 清除旧的提示窗
+    clearVoltageInfo(device.id);
+
+    // 获取电压信息
+    const voltageInfo = `V: ${device.voltage || 'N/A'}`;
+
+    // 创建提示窗容器
+    const infoGroup = svg.append('g')
+        .attr('class', 'voltage-info')
+        .attr('data-device-id', device.id)
+        .attr('transform', `translate(${x},${y})`);
+
+    let fillColor = 'rgb(74, 144, 226)'
+    if(device.voltage.split('v')[0] * 1 < 53.7)
+        fillColor = 'rgb(255, 0, 0)'
+
+
+    // 计算文本宽度以确定提示框大小
+    const text = infoGroup.append('text')
+        .text(voltageInfo)
+        .attr('fill', 'white')
+        .attr('font-size', '25px')
+        .attr('font-weight', 'bold')
+        .attr('text-anchor', 'middle')
+        .attr('dy', '0.3em');
+
+    const textWidth = text.node().getBBox().width + 10; // 左右各加5px边距
+    const textHeight = 25; // 固定高度
+
+    // 背景矩形
+    infoGroup.insert('rect', 'text')
+        .attr('width', textWidth)
+        .attr('height', textHeight)
+        .attr('rx', 5)
+        .attr('ry', 5)
+        .attr('fill', fillColor)
+        .attr('opacity', '1')
+        .attr('x', -textWidth / 2)
+        .attr('y', -textHeight / 2);
+
+    // 连接到设备的线
+    infoGroup.append('line')
+        .attr('x1', -5)
+        .attr('y1', textHeight / 2)
+        .attr('x2', 30)
+        .attr('y2', textHeight / 2 + 15)
+        .attr('stroke', fillColor)
+        .attr('stroke-width', 2)
+        .attr('opacity', '1');
 }
 
 // 显示错误提示窗
@@ -907,10 +1018,10 @@ function showErrorInfo(device) {
 }
 
 // 更新所有错误提示窗位置
-function updateAllErrorInfoPositions(deivceId = '') {
+function updateAllErrorInfoPositions(deviceId = '') {
     let needUpdateDevices = []
-    if (deivceId) {
-        needUpdateDevices = usedDevices.filter(device => device.id === deivceId);
+    if (deviceId) {
+        needUpdateDevices = usedDevices.filter(device => device.id === deviceId);
     } else needUpdateDevices = usedDevices;
 
     needUpdateDevices.forEach(device => {
@@ -925,6 +1036,31 @@ function updateAllErrorInfoPositions(deivceId = '') {
                     const x = parseFloat(match[1]) + 40; // 向右偏移40px
                     const y = parseFloat(match[2]) - 60; // 向上偏移60px
                     errorInfo.attr('transform', `translate(${x},${y})`);
+                }
+            }
+        }
+    });
+}
+
+// 更新所有电压信息提示窗位置
+function updateAllVoltageInfoPositions(deviceId = '') {
+    let needUpdateDevices = []
+    if (deviceId) {
+        needUpdateDevices = usedDevices.filter(device => device.id === deviceId);
+    } else needUpdateDevices = usedDevices;
+
+    needUpdateDevices.forEach(device => {
+        const svg = d3.select('#topologySVG');
+        const voltageInfo = svg.select(`.voltage-info[data-device-id="${device.id}"]`);
+        if (!voltageInfo.empty()) {
+            const nodeGroup = svg.select(`[data-id="${device.id}"]`);
+            const transform = nodeGroup.attr('transform');
+            if (transform) {
+                const match = transform.match(/translate\(([^,]+),([^)]+)\)/);
+                if (match) {
+                    const x = parseFloat(match[1]) - 50; // 向左偏移50px
+                    const y = parseFloat(match[2])
+                    voltageInfo.attr('transform', `translate(${x},${y})`);
                 }
             }
         }
@@ -1056,16 +1192,3 @@ export {
     addDeviceToCanvas,
     connectDevices
 }
-
-/*
-
-在机器学习和深度学习中对于结构化数据多分类问题
-1.目前主要的基础模型有哪些
-2.近些年来比较新且比较热门的模型有哪些
-3.简要介绍一下各个模型的原理、准确度和适用场景
-4.在实际应用中，如何选择合适的模型进行多分类任务
-5.基于现有的模型，有哪些比较常见的创新模式
-
-
-
-*/

@@ -36,12 +36,12 @@ id,name,type,status,voltage,area,station,notes,error_info,is_backup
 1036,P20,低压配电屏,normal,,天河,天河机楼,,,False
 1037,P21,低压配电屏,normal,,天河,天河机楼,,,False
 1038,P22 整流器房配电屏,低压配电屏,normal,,天河,天河机楼,,,False
-1039,2层中达直流系统#01南都电池01,电池组,normal,,天河,天河机楼,,,True
-1040,2层第二中达直流系统#02南都电池01,电池组,normal,,天河,天河机楼,,,True
-1041,第七华为直流系统电池组02,电池组,normal,,天河,天河机楼,,,True
-1042,六系统爱默生整流器电池组,电池组,normal,,天河,天河机楼,,,True
-1043,四系统爱默生整流器电池组,电池组,normal,,天河,天河机楼,,,True
-1044,附楼4楼爱默生UPS电池组,电池组,normal,,天河,天河机楼,,,True
+1039,2层中达直流系统#01南都电池01,电池组,normal,53.7v,天河,天河机楼,,,True
+1040,2层第二中达直流系统#02南都电池01,电池组,normal,53.7v,天河,天河机楼,,,True
+1041,第七华为直流系统电池组02,电池组,normal,53.7v,天河,天河机楼,,,True
+1042,六系统爱默生整流器电池组,电池组,normal,53.7v,天河,天河机楼,,,True
+1043,四系统爱默生整流器电池组,电池组,normal,53.7v,天河,天河机楼,,,True
+1044,附楼4楼爱默生UPS电池组,电池组,normal,53.7v,天河,天河机楼,,,True
 1045,中达直流系统#01整流系统,整流系统,normal,,天河,天河机楼,,,False
 1046,第二中达直流系统#02整流系统,整流系统,normal,,天河,天河机楼,,,False
 1047,六系统爱默生整流系统,整流系统,normal,,天河,天河机楼,,,False
@@ -53,3 +53,8 @@ id,name,type,status,voltage,area,station,notes,error_info,is_backup
 1053,五楼交换机房,机房,normal,,天河,天河机楼,,,False
 1054,设备机房,机房,normal,,天河,天河机楼,,,False
 1055,三楼微模块机房,微模块,normal,,天河,天河机楼,,,False
+1056,供电局/物业,高压输入,normal,,天河,接入间,,,False
+1057,蓄电池,电池组,normal,53.7,天河,接入间,,,True
+1058,空调,空调,normal,,天河,接入间,,,False
+1059,开关电源/整流设备,整流系统,normal,,天河,接入间,,,False
+1060,通信设备,机房,normal,,天河,接入间,,,False

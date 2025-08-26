@@ -81,7 +81,7 @@ function saveTopology() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert(`拓扑图已成功保存为 ${fileName}`);
+                alert(`拓扑图已成功保存为 ${fileName.split('.')[0]}`);
             } else {
                 alert('保存拓扑图失败: ' + data.message);
             }
@@ -154,7 +154,7 @@ function loadTopology() {
                     item.className = 'topology-item';
                     item.innerHTML = `
                         <div class="topology-info">
-                            <div class="topology-name">${file.name}</div>
+                            <div class="topology-name">${file.name.split('.')[0]}</div>
                             <div class="topology-time">创建时间: ${file.createdTime}</div>
                         </div>
                         <div class="topology-actions">
@@ -265,7 +265,7 @@ function loadTopology() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert(`文件 ${filename} 已成功删除`);
+                    alert(`文件 ${filename.split('.')[0]} 已成功删除`);
                     // 重新加载文件列表
                     loadTopologyFiles();
                 } else {
