@@ -524,6 +524,10 @@ function updateTopologyStatus() {
     fetch('/api/devices')
         .then(response => response.json())
         .then(newDevices => {
+
+            // newDevices = newDevices.filter(device => device.station === '接入间')
+            newDevices = newDevices.filter(device => device.station === '天河机楼')
+
             // 存储异常设备ID
             const abnormalDevices = new Set();
             // 存储正常设备ID
@@ -553,7 +557,9 @@ function updateTopologyStatus() {
 
                 // 为电池组设备显示电压信息
                 if (device.type === '电池组') {
-                    showVoltageInfo(device);
+                    // UPS电池暂时不显示电压
+                    if(!(device.name.includes('UPS') || device.name.includes('ups')))
+                        showVoltageInfo(device);
                 }
 
                 // 分类设备状态
@@ -598,15 +604,16 @@ function updateTopologyStatus() {
             if (publicPowerOff) {
                 APP_CONFIG.flowEffect.color = 'rgb(255, 255, 0)';
             }
-            
+
             // 判断是否有油机启动
-            let oilDeviceAreUsed = topologicalOrder.filter(device => device.type === '油机').every(oilDevice => {
+            let oilDevices = topologicalOrder.filter(device => device.type === '油机')
+            let oilDeviceAreUsed = (oilDevices == []) ? false : oilDevices.every(oilDevice => {
                 let relatedConn = connections.find(conn => conn.source === oilDevice.id)
                 if (relatedConn && relatedConn.flowGroup)
                     return true
-                else false
-            })            
-            
+                else return false
+            })
+
             // 根据状态进行流动效果更新
             topologicalOrder.forEach(device => {
                 const deviceId = device.id;
@@ -622,12 +629,15 @@ function updateTopologyStatus() {
                 if (device.notes === '市电备路') shouldHaveFlow = false
 
                 // 如果当前油机正在供电，则类型为电池的不应该有流动效果
-                if(oilDeviceAreUsed && device.type === '电池组')
+                if (oilDeviceAreUsed && device.type === '电池组')
                     shouldHaveFlow = false
                 // 如果当前市电停电且油机没供电，那么有足够电压的电池设备要供电，都应该有流动效果
-                if(!oilDeviceAreUsed && publicPowerOff && device.type === '电池组' && device.voltage.split('v')[0] * 1 >= 43){
-                    shouldHaveFlow = true
+                if (!oilDeviceAreUsed && publicPowerOff && device.type === '电池组') {
+                    if (device.voltage.split('v')[0] * 1 >= 43)
+                        shouldHaveFlow = true
+                    else shouldHaveFlow = false
                 }
+
                 sourceConnections.forEach(conn => {
                     // 检查当前连线是否已经有流动效果
                     const hasFlow = !!conn.flowGroup;
@@ -673,7 +683,7 @@ function updateTopologyStatus() {
                         }
                     )
                 })
-  
+
                 // 当前节点只要有一个“以该源头节点为起点的连线有流动效果的”源头，且以所有上述源头为起点到达该节点的所有路径上只要有一条是通的
                 // 那么以这个端点为起点的连线都要添加流动效果
                 if (activeSources.length != 0 && hasAvailablePath(activeSources, deviceId)) {
@@ -712,18 +722,18 @@ function updateTopologyStatus() {
                     return true
                 else false
             })
-            if(publicPowerOff && !haveOilUsed) {
+            if (publicPowerOff && !haveOilUsed) {
                 connections.filter(conn => conn.looped).forEach(conn => {
-                    if(conn.flowGroup)
+                    if (conn.flowGroup)
                         removeFlowEffect(conn.id)
                 })
             }
             // 当市电有电或油机供电且电池设备电压不足时进行充电
-            else{
+            else {
                 connections.filter(conn => conn.looped).forEach(conn => {
                     let batteryDevice = usedDevices.find(d => d.id === conn.target)
-                    if(batteryDevice.voltage.split('v')[0] * 1 < 53.7){
-                        if(!conn.flowGroup)
+                    if (batteryDevice.voltage.split('v')[0] * 1 < 53.7) {
+                        if (!conn.flowGroup)
                             addFlowEffect(conn.id)
                     }
                     else
@@ -912,7 +922,7 @@ function showVoltageInfo(device) {
         .attr('transform', `translate(${x},${y})`);
 
     let fillColor = 'rgb(74, 144, 226)'
-    if(device.voltage.split('v')[0] * 1 < 53.7)
+    if (device.voltage.split('v')[0] * 1 < 53.7)
         fillColor = 'rgb(255, 0, 0)'
 
 
@@ -988,7 +998,7 @@ function showErrorInfo(device) {
         .attr('dy', '0.3em');
 
     const textWidth = text.node().getBBox().width + 10; // 左右各加5px边距
-    const textHeight = 30; // 固定高度
+    const textHeight = 40; // 固定高度
 
     // 背景矩形
     infoGroup.insert('rect', 'text')
@@ -1151,31 +1161,31 @@ function bfsTopologicalOrder(devices, connections) {
     // 创建邻接表和入度映射
     const graph = new Map();
     const inDegree = new Map();
-    
+
     // 初始化图结构
     devices.forEach(device => {
         graph.set(device.id, []);
         inDegree.set(device.id, 0);
     });
-    
+
     // 构建图
     connections.forEach(({ source, target }) => {
         graph.get(source).push(target);
         inDegree.set(target, inDegree.get(target) + 1);
     });
-    
+
     // 找到所有起点（入度为0的节点）
     const queue = [];
     inDegree.forEach((degree, device) => {
         if (degree === 0) queue.push(device);
     });
-    
+
     // 执行BFS
     const result = [];
     while (queue.length > 0) {
         const node = queue.shift();
         result.push(devices.find(device => device.id === node));
-        
+
         // 处理当前节点的所有邻居
         graph.get(node).forEach(neighbor => {
             inDegree.set(neighbor, inDegree.get(neighbor) - 1);
@@ -1184,7 +1194,7 @@ function bfsTopologicalOrder(devices, connections) {
             }
         });
     }
-    
+
     return result;
 }
 

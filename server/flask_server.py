@@ -138,8 +138,8 @@ def serve_static(path):
 @app.route('/api/power-off', methods=['GET'])
 def power_off():
 
-    csv_file_path = 'f:/tuoputest-test/static/data/device_info3.csv'
-    excel_file_path = 'f:/tuoputest-test/static/data/天河历史告警导出.xls'
+    csv_file_path = os.path.join(root_dir, data_path)
+    excel_file_path = os.path.join(root_dir, 'static/data/天河历史告警导出.xls')
 
     # 检查文件是否存在
     if not os.path.exists(csv_file_path):
@@ -159,7 +159,6 @@ def power_off():
         # 假设Excel文件中的第一个工作表包含告警数据
         # alarm_df = pd.read_excel(excel_file_path, engine='xlrd')
         alarm_df = pd.read_excel(excel_file_path, sheet_name='天河机楼告警案例')
-        print(f"成功读取Excel文件，共{len(alarm_df)}行数据")
     except Exception as e:
         raise Exception(f"读取Excel文件时出错: {str(e)}")
 
@@ -197,6 +196,7 @@ def power_off():
     device_df.loc[device_df['notes'] == '市电备路', 'error_info'] = '等待切换'
 
     last_match_index = None
+    chaodiV = '47v'
     for index, row in alarm_df.iterrows():
         # 先将上一次匹配到的行的status列修改为normal，error_info列置为空
         if last_match_index is not None:
@@ -220,16 +220,20 @@ def power_off():
             device_df.loc[device_row.index, 'error_info'] = error_info
             
             # 处理电池电压相关逻辑
+            
             if '信号名称' in row and isinstance(row['信号名称'], str):
                 # 查找所有类型为电池组的设备
                 all_battery_devices = device_df[device_df['type'] == '电池组']
                 if '电池' in row['信号名称']:
                     if '超低' in row['信号名称']:
                         # 将所有电池组设备的voltage列值修改为47v
-                        device_df.loc[all_battery_devices.index, 'voltage'] = '47v'
+                        device_df.loc[all_battery_devices.index, 'voltage'] = chaodiV
                     elif '过低' in row['信号名称']:
                         # 将所有电池组设备的voltage列值修改为49v
                         device_df.loc[all_battery_devices.index, 'voltage'] = '49v'
+                    elif '不足以供电' in row['信号名称']:
+                        device_df.loc[all_battery_devices.index, 'voltage'] = '35v'
+            # chaodiV = '43v'
         else:
             print(f"未找到名称为'{name}'的设备行")
         # 最后将修改后的device_df写入CSV文件
@@ -238,7 +242,7 @@ def power_off():
         with open(new_csv_file_path , 'w', newline='', encoding='utf-8') as f:
             device_df.to_csv(f, index=False)
         # 等待n秒
-        n = 3
+        n = 5
         print(f"{index + 1}已将修改后的设备信息写入新文件: {new_csv_file_path}")
         time.sleep(n)
     #最后将所有status置为normal，error_info置为空

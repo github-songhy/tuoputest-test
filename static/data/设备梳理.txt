@@ -48,7 +48,6 @@ ATS高压柜
 低压配电屏P1
 低压配电屏P1
 
-新建一个保存常量的constants.js文件和一个保存全局变量的global-variable.js，将test.js和script.js中所有用到的常量包括可选择的参数全部放入其中，并在合适的位置引入合适的常量
 
 
 
